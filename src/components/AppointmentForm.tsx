@@ -5,15 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { CalendarPlus, Loader2 } from "lucide-react";
 import { z } from "zod";
+import { format } from "date-fns";
 
 const appointmentSchema = z.object({
-  patientNumber: z.string()
-    .trim()
-    .nonempty("Číslo pacienta je povinné")
-    .max(50, "Číslo pacienta je príliš dlhé"),
+  ambulanceCode: z.string().nonempty("Kód ambulancie je povinný"),
   appointmentDate: z.string().nonempty("Dátum rezervácie je povinný"),
   notes: z.string().max(500, "Poznámky môžu mať maximálne 500 znakov").optional(),
 });
@@ -23,11 +22,21 @@ interface AppointmentFormProps {
 }
 
 const AppointmentForm = ({ userId }: AppointmentFormProps) => {
-  const [patientNumber, setPatientNumber] = useState("");
+  const [ambulanceCode, setAmbulanceCode] = useState("");
   const [appointmentDate, setAppointmentDate] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  const generatePatientNumber = (code: string, datetime: string) => {
+    const date = new Date(datetime);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${code}-${year}-${month}-${day}-${hours}${minutes}`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,14 +44,16 @@ const AppointmentForm = ({ userId }: AppointmentFormProps) => {
 
     try {
       appointmentSchema.parse({
-        patientNumber,
+        ambulanceCode,
         appointmentDate,
         notes,
       });
 
+      const patientNumber = generatePatientNumber(ambulanceCode, appointmentDate);
+
       const { error } = await supabase.from("appointments").insert({
         angiologist_id: userId,
-        patient_number: patientNumber.trim(),
+        patient_number: patientNumber,
         appointment_date: new Date(appointmentDate).toISOString(),
         notes: notes.trim() || null,
       });
@@ -51,11 +62,11 @@ const AppointmentForm = ({ userId }: AppointmentFormProps) => {
 
       toast({
         title: "Rezervácia vytvorená",
-        description: "Rezervácia bola úspešne pridaná do kalendára",
+        description: `Rezervácia s číslom ${patientNumber} bola úspešne pridaná`,
       });
 
       // Reset form
-      setPatientNumber("");
+      setAmbulanceCode("");
       setAppointmentDate("");
       setNotes("");
     } catch (error) {
@@ -85,29 +96,32 @@ const AppointmentForm = ({ userId }: AppointmentFormProps) => {
           <CardTitle>Nová rezervácia</CardTitle>
         </div>
         <CardDescription>
-          Vytvorte novú rezerváciu pre pacienta (používame len číslo pacienta pre GDPR)
+          Číslo pacienta sa vygeneruje automaticky z kódu ambulancie a času vyšetrenia
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="patientNumber">Číslo pacienta *</Label>
-            <Input
-              id="patientNumber"
-              type="text"
-              placeholder="napr. P-2024-001"
-              value={patientNumber}
-              onChange={(e) => setPatientNumber(e.target.value)}
-              required
-              maxLength={50}
-            />
+            <Label htmlFor="ambulanceCode">Kód ambulancie *</Label>
+            <Select value={ambulanceCode} onValueChange={setAmbulanceCode} required>
+              <SelectTrigger id="ambulanceCode">
+                <SelectValue placeholder="Vyberte kód ambulancie" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="AA">AA</SelectItem>
+                <SelectItem value="AB">AB</SelectItem>
+                <SelectItem value="AC">AC</SelectItem>
+                <SelectItem value="AD">AD</SelectItem>
+                <SelectItem value="AE">AE</SelectItem>
+              </SelectContent>
+            </Select>
             <p className="text-xs text-muted-foreground">
-              Zadajte len identifikačné číslo pacienta, nie meno
+              Číslo pacienta: {ambulanceCode && appointmentDate ? generatePatientNumber(ambulanceCode, appointmentDate) : "vyberte kód a dátum"}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="appointmentDate">Dátum a čas rezervácie *</Label>
+            <Label htmlFor="appointmentDate">Dátum a čas vyšetrenia *</Label>
             <Input
               id="appointmentDate"
               type="datetime-local"
