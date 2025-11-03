@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -14,7 +13,7 @@ import { format } from "date-fns";
 const appointmentSchema = z.object({
   ambulanceCode: z.string().nonempty("Kód ambulancie je povinný"),
   appointmentDate: z.string().nonempty("Dátum rezervácie je povinný"),
-  notes: z.string().max(500, "Poznámky môžu mať maximálne 500 znakov").optional(),
+  procedureType: z.string().nonempty("Typ procedúry je povinný"),
 });
 
 interface AppointmentFormProps {
@@ -24,7 +23,7 @@ interface AppointmentFormProps {
 const AppointmentForm = ({ userId }: AppointmentFormProps) => {
   const [ambulanceCode, setAmbulanceCode] = useState("");
   const [appointmentDate, setAppointmentDate] = useState("");
-  const [notes, setNotes] = useState("");
+  const [procedureType, setProcedureType] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -46,7 +45,7 @@ const AppointmentForm = ({ userId }: AppointmentFormProps) => {
       appointmentSchema.parse({
         ambulanceCode,
         appointmentDate,
-        notes,
+        procedureType,
       });
 
       const patientNumber = generatePatientNumber(ambulanceCode, appointmentDate);
@@ -55,7 +54,7 @@ const AppointmentForm = ({ userId }: AppointmentFormProps) => {
         angiologist_id: userId,
         patient_number: patientNumber,
         appointment_date: new Date(appointmentDate).toISOString(),
-        notes: notes.trim() || null,
+        notes: procedureType,
       });
 
       if (error) throw error;
@@ -68,7 +67,7 @@ const AppointmentForm = ({ userId }: AppointmentFormProps) => {
       // Reset form
       setAmbulanceCode("");
       setAppointmentDate("");
-      setNotes("");
+      setProcedureType("");
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
@@ -132,15 +131,17 @@ const AppointmentForm = ({ userId }: AppointmentFormProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Poznámky (voliteľné)</Label>
-            <Textarea
-              id="notes"
-              placeholder="Doplňujúce informácie..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              maxLength={500}
-              rows={3}
-            />
+            <Label htmlFor="procedureType">Typ procedúry *</Label>
+            <Select value={procedureType} onValueChange={setProcedureType} required>
+              <SelectTrigger id="procedureType">
+                <SelectValue placeholder="Vyberte typ procedúry" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Operácia">Operácia</SelectItem>
+                <SelectItem value="Sklerotizácia">Sklerotizácia</SelectItem>
+                <SelectItem value="Iné">Iné</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <Button type="submit" className="w-full" disabled={loading}>
