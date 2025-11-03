@@ -15,10 +15,10 @@ const Index = () => {
             </div>
           </div>
           <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Angiologický rezervačný systém
+            ANGIOPLUS
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-            Profesionálny systém pre správu rezervácií a provízií angiológov
+            Profesionálny systém pre správu rezervácií a manipulačných poplatkov angiológov
             v súlade s GDPR
           </p>
           <Button
@@ -61,9 +61,9 @@ const Index = () => {
                 <TrendingUp className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
             </div>
-            <h3 className="text-xl font-semibold mb-2">Provízie</h3>
+            <h3 className="text-xl font-semibold mb-2">Manipulačné poplatky</h3>
             <p className="text-muted-foreground">
-              Automatické sledovanie provízií za odoslaných pacientov
+              Automatické sledovanie manipulačných poplatkov za odoslaných pacientov
             </p>
           </div>
         </div>

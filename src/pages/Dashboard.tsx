@@ -61,7 +61,7 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <Calendar className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">Angiologický systém</h1>
+            <h1 className="text-2xl font-bold">ANGIOPLUS</h1>
           </div>
           <Button variant="outline" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
@@ -74,7 +74,7 @@ const Dashboard = () => {
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">Dashboard</h2>
           <p className="text-muted-foreground">
-            Spravujte rezervácie a sledujte svoje provízie
+            Spravujte rezervácie a sledujte svoje manipulačné poplatky
           </p>
         </div>
 
