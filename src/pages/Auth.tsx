@@ -9,10 +9,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Heart } from "lucide-react";
 import { z } from "zod";
 
-const authSchema = z.object({
-  email: z.string().email("Neplatná emailová adresa").max(255),
+const loginSchema = z.object({
+  email: z.string().trim().email("Neplatná emailová adresa").max(255),
   password: z.string().min(6, "Heslo musí mať minimálne 6 znakov").max(100),
-  fullName: z.string().min(2, "Meno musí mať minimálne 2 znaky").max(100).optional(),
+});
+
+const registerSchema = loginSchema.extend({
+  fullName: z
+    .string()
+    .trim()
+    .min(2, "Meno musí mať minimálne 2 znaky")
+    .max(100),
 });
 
 const Auth = () => {
@@ -47,16 +54,15 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const validationData = isLogin 
-        ? { email, password }
-        : { email, password, fullName };
-      
-      authSchema.parse(validationData);
-
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+        const { email: parsedEmail, password: parsedPassword } = loginSchema.parse({
+          email,
           password,
+        });
+
+        const { error } = await supabase.auth.signInWithPassword({
+          email: parsedEmail,
+          password: parsedPassword,
         });
 
         if (error) {
@@ -71,15 +77,25 @@ const Auth = () => {
           description: "Vitajte späť!",
         });
       } else {
+        const {
+          email: parsedEmail,
+          password: parsedPassword,
+          fullName: parsedFullName,
+        } = registerSchema.parse({
+          email,
+          password,
+          fullName,
+        });
+
         const redirectUrl = `${window.location.origin}/dashboard`;
         
         const { error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
+          email: parsedEmail,
+          password: parsedPassword,
           options: {
             emailRedirectTo: redirectUrl,
             data: {
-              full_name: fullName.trim(),
+              full_name: parsedFullName,
             },
           },
         });

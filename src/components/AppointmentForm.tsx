@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,12 +7,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { CalendarPlus, Loader2 } from "lucide-react";
 import { z } from "zod";
-import { format } from "date-fns";
-
+import { useCreateAppointment } from "@/hooks/use-appointments";
 const appointmentSchema = z.object({
-  ambulanceCode: z.string().nonempty("Kód ambulancie je povinný"),
-  appointmentDate: z.string().nonempty("Dátum rezervácie je povinný"),
-  procedureType: z.string().nonempty("Typ procedúry je povinný"),
+  ambulanceCode: z.string().min(1, "Kód ambulancie je povinný"),
+  appointmentDate: z.string().min(1, "Dátum rezervácie je povinný").refine(
+    (date) => {
+      const parsed = new Date(date);
+      return !isNaN(parsed.getTime()) && parsed > new Date();
+    },
+    {
+      message: "Dátum musí byť platný a v budúcnosti",
+    }
+  ),
+  procedureType: z.string().min(1, "Typ procedúry je povinný"),
 });
 
 interface AppointmentFormProps {
@@ -24,7 +30,7 @@ const AppointmentForm = ({ userId }: AppointmentFormProps) => {
   const [ambulanceCode, setAmbulanceCode] = useState("");
   const [appointmentDate, setAppointmentDate] = useState("");
   const [procedureType, setProcedureType] = useState("");
-  const [loading, setLoading] = useState(false);
+  const createAppointment = useCreateAppointment();
   const { toast } = useToast();
 
   const generatePatientNumber = (code: string, datetime: string) => {
@@ -39,7 +45,6 @@ const AppointmentForm = ({ userId }: AppointmentFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
 
     try {
       appointmentSchema.parse({
@@ -48,20 +53,18 @@ const AppointmentForm = ({ userId }: AppointmentFormProps) => {
         procedureType,
       });
 
+      const appointmentDateObj = new Date(appointmentDate);
+      if (isNaN(appointmentDateObj.getTime())) {
+        throw new Error("Neplatný dátum rezervácie");
+      }
+
       const patientNumber = generatePatientNumber(ambulanceCode, appointmentDate);
 
-      const { error } = await supabase.from("appointments").insert({
+      await createAppointment.mutateAsync({
         angiologist_id: userId,
         patient_number: patientNumber,
-        appointment_date: new Date(appointmentDate).toISOString(),
+        appointment_date: appointmentDateObj.toISOString(),
         notes: procedureType,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Rezervácia vytvorená",
-        description: `Rezervácia s číslom ${patientNumber} bola úspešne pridaná`,
       });
 
       // Reset form
@@ -75,15 +78,8 @@ const AppointmentForm = ({ userId }: AppointmentFormProps) => {
           title: "Chyba validácie",
           description: error.errors[0].message,
         });
-      } else if (error instanceof Error) {
-        toast({
-          variant: "destructive",
-          title: "Chyba",
-          description: error.message,
-        });
       }
-    } finally {
-      setLoading(false);
+      // Other errors are handled by mutation's onError
     }
   };
 
@@ -144,8 +140,8 @@ const AppointmentForm = ({ userId }: AppointmentFormProps) => {
             </Select>
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? (
+          <Button type="submit" className="w-full" disabled={createAppointment.isPending}>
+            {createAppointment.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Vytvárám...

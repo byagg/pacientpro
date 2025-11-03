@@ -1,30 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
-
-interface Appointment {
-  id: string;
-  patient_number: string;
-  appointment_date: string;
-  status: string;
-  notes: string | null;
-  created_at: string;
-}
+import { useAppointments } from "@/hooks/use-appointments";
 
 interface AppointmentsListProps {
   userId: string;
 }
 
 const AppointmentsList = ({ userId }: AppointmentsListProps) => {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: appointments = [], isLoading } = useAppointments(userId);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    fetchAppointments();
+    if (!userId) return;
 
     // Set up realtime subscription
     const channel = supabase
@@ -38,7 +31,7 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
           filter: `angiologist_id=eq.${userId}`,
         },
         () => {
-          fetchAppointments();
+          queryClient.invalidateQueries({ queryKey: ["appointments", userId] });
         }
       )
       .subscribe();
@@ -46,26 +39,9 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, queryClient]);
 
-  const fetchAppointments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("appointments")
-        .select("*")
-        .eq("angiologist_id", userId)
-        .order("appointment_date", { ascending: false });
-
-      if (error) throw error;
-      setAppointments(data || []);
-    } catch (error) {
-      console.error("Error fetching appointments:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | null) => {
     switch (status) {
       case "scheduled":
         return "bg-primary/10 text-primary";
@@ -78,7 +54,7 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
     }
   };
 
-  const getStatusText = (status: string) => {
+  const getStatusText = (status: string | null) => {
     switch (status) {
       case "scheduled":
         return "Naplánované";
@@ -87,11 +63,11 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
       case "cancelled":
         return "Zrušené";
       default:
-        return status;
+        return status || "Neznámy";
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Card className="shadow-card">
         <CardContent className="py-8 text-center text-muted-foreground">

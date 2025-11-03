@@ -1,25 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, TrendingUp } from "lucide-react";
-
-interface Commission {
-  id: string;
-  amount: number;
-  status: string;
-  created_at: string;
-}
+import { useCommissions } from "@/hooks/use-commissions";
 
 interface CommissionsCardProps {
   userId: string;
 }
 
 const CommissionsCard = ({ userId }: CommissionsCardProps) => {
-  const [commissions, setCommissions] = useState<Commission[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: commissions = [], isLoading } = useCommissions(userId);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    fetchCommissions();
+    if (!userId) return;
 
     // Set up realtime subscription
     const channel = supabase
@@ -33,7 +28,7 @@ const CommissionsCard = ({ userId }: CommissionsCardProps) => {
           filter: `angiologist_id=eq.${userId}`,
         },
         () => {
-          fetchCommissions();
+          queryClient.invalidateQueries({ queryKey: ["commissions", userId] });
         }
       )
       .subscribe();
@@ -41,24 +36,7 @@ const CommissionsCard = ({ userId }: CommissionsCardProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
-
-  const fetchCommissions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("commissions")
-        .select("*")
-        .eq("angiologist_id", userId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setCommissions(data || []);
-    } catch (error) {
-      console.error("Error fetching commissions:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [userId, queryClient]);
 
   const totalCommissions = commissions.reduce((sum, c) => sum + Number(c.amount), 0);
   const pendingCommissions = commissions
@@ -68,7 +46,7 @@ const CommissionsCard = ({ userId }: CommissionsCardProps) => {
     .filter((c) => c.status === "paid")
     .reduce((sum, c) => sum + Number(c.amount), 0);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Card className="shadow-card">
         <CardContent className="py-8 text-center text-muted-foreground">

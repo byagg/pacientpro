@@ -78,12 +78,16 @@ const Dashboard = () => {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 mb-8">
-          <AppointmentForm userId={user?.id || ""} />
-          <CommissionsCard userId={user?.id || ""} />
-        </div>
+        {user?.id && (
+          <>
+            <div className="grid gap-6 md:grid-cols-2 mb-8">
+              <AppointmentForm userId={user.id} />
+              <CommissionsCard userId={user.id} />
+            </div>
 
-        <AppointmentsList userId={user?.id || ""} />
+            <AppointmentsList userId={user.id} />
+          </>
+        )}
       </main>
     </div>
   );
