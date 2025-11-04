@@ -7,6 +7,10 @@ export interface Profile {
   email: string;
   full_name: string;
   bank_account: string | null;
+  invoice_name: string | null;
+  invoice_address: string | null;
+  invoice_ico: string | null;
+  invoice_dic: string | null;
   created_at: string;
 }
 
@@ -14,6 +18,10 @@ export interface ProfileUpdate {
   email?: string;
   full_name?: string;
   bank_account?: string | null;
+  invoice_name?: string | null;
+  invoice_address?: string | null;
+  invoice_ico?: string | null;
+  invoice_dic?: string | null;
 }
 
 export const useProfile = (userId: string) => {
@@ -24,7 +32,8 @@ export const useProfile = (userId: string) => {
       
       try {
         const data = await sql`
-          SELECT id, email, full_name, bank_account, created_at
+          SELECT id, email, full_name, bank_account, 
+                 invoice_name, invoice_address, invoice_ico, invoice_dic, created_at
           FROM profiles
           WHERE id = ${userId}
         `;
@@ -51,55 +60,35 @@ export const useUpdateProfile = () => {
 
   return useMutation({
     mutationFn: async ({ userId, updates }: { userId: string; updates: ProfileUpdate }) => {
-      // Build update query - only bank_account is used in this app
-      if (updates.bank_account !== undefined) {
-        const [result] = await sql`
-          UPDATE profiles
-          SET bank_account = ${updates.bank_account}
-          WHERE id = ${userId}
-          RETURNING id, email, full_name, bank_account, created_at
-        `;
-        return result as Profile;
-      }
-      
-      // For other fields, build queries separately
-      if (updates.email !== undefined && updates.full_name !== undefined) {
-        const [result] = await sql`
-          UPDATE profiles
-          SET email = ${updates.email}, full_name = ${updates.full_name}
-          WHERE id = ${userId}
-          RETURNING id, email, full_name, bank_account, created_at
-        `;
-        return result as Profile;
-      }
-      
-      if (updates.email !== undefined) {
-        const [result] = await sql`
-          UPDATE profiles
-          SET email = ${updates.email}
-          WHERE id = ${userId}
-          RETURNING id, email, full_name, bank_account, created_at
-        `;
-        return result as Profile;
-      }
-      
-      if (updates.full_name !== undefined) {
-        const [result] = await sql`
-          UPDATE profiles
-          SET full_name = ${updates.full_name}
-          WHERE id = ${userId}
-          RETURNING id, email, full_name, bank_account, created_at
-        `;
-        return result as Profile;
+      if (Object.keys(updates).length === 0) {
+        throw new Error('No updates provided');
       }
 
-      throw new Error('No updates provided');
+      // Build dynamic update query
+      const setClauses: string[] = [];
+      const values: any[] = [];
+
+      Object.entries(updates).forEach(([key, value]) => {
+        setClauses.push(`${key} = $${values.length + 1}`);
+        values.push(value);
+      });
+
+      const query = `
+        UPDATE profiles
+        SET ${setClauses.join(', ')}
+        WHERE id = $${values.length + 1}
+        RETURNING id, email, full_name, bank_account, 
+                  invoice_name, invoice_address, invoice_ico, invoice_dic, created_at
+      `;
+
+      const [result] = await sql.unsafe(query, [...values, userId]);
+      return result as Profile;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["profile", data.id] });
       toast({
         title: "Profil aktualizovaný",
-        description: "Bankový účet bol úspešne uložený",
+        description: "Údaje boli úspešne uložené",
       });
     },
     onError: (error: Error) => {
