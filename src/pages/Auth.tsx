@@ -36,9 +36,9 @@ const Auth = () => {
   useEffect(() => {
     // Check if user is already logged in
     const session = auth.getSession();
-    if (session) {
-      navigate("/dashboard");
-    }
+      if (session) {
+        navigate("/dashboard");
+      }
   }, [navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {

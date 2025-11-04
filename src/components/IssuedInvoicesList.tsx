@@ -1,0 +1,158 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { FileText, Calendar, User, Euro, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { sk } from "date-fns/locale";
+import { useQuery } from "@tanstack/react-query";
+import { sql } from "@/integrations/neon/client";
+
+interface IssuedInvoicesListProps {
+  receivingDoctorId: string;
+}
+
+interface IssuedInvoice {
+  id: string;
+  invoice_number: string;
+  sending_doctor_id: string;
+  sending_doctor_name: string;
+  total_amount: string;
+  patient_count: number;
+  issue_date: string;
+  status: string;
+  paid_at: string | null;
+}
+
+const IssuedInvoicesList = ({ receivingDoctorId }: IssuedInvoicesListProps) => {
+  // Fetch invoices issued by this receiving doctor (they are the recipient)
+  const { data: invoices = [], isLoading } = useQuery({
+    queryKey: ["issued-invoices", receivingDoctorId],
+    queryFn: async () => {
+      const result = await sql<IssuedInvoice[]>`
+        SELECT 
+          i.id,
+          i.invoice_number,
+          i.sending_doctor_id,
+          i.total_amount,
+          i.patient_count,
+          i.issue_date,
+          i.status,
+          i.paid_at,
+          p.full_name as sending_doctor_name
+        FROM public.invoices i
+        JOIN public.profiles p ON i.sending_doctor_id = p.id
+        WHERE i.receiving_doctor_id = ${receivingDoctorId}
+        ORDER BY i.issue_date DESC
+      `;
+      return result;
+    },
+    enabled: !!receivingDoctorId,
+  });
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-yellow-100 text-yellow-700";
+      case "paid":
+        return "bg-green-100 text-green-700";
+      case "cancelled":
+        return "bg-red-100 text-red-700";
+      default:
+        return "bg-muted text-muted-foreground";
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "Čaká na úhradu";
+      case "paid":
+        return "Uhradená";
+      case "cancelled":
+        return "Zrušená";
+      default:
+        return status;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card className="shadow-card">
+        <CardContent className="py-8 text-center">
+          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="shadow-card">
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <FileText className="h-5 w-5 text-primary" />
+          <CardTitle>Vystavené faktúry</CardTitle>
+        </div>
+        <CardDescription>
+          Faktúry vystavené odosielajúcim lekárom za vyšetrených pacientov
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {invoices.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">
+            Zatiaľ ste nevystavili žiadne faktúry
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {invoices.map((invoice) => (
+              <Card key={invoice.id} className="border">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{invoice.invoice_number}</span>
+                        <Badge className={getStatusColor(invoice.status)}>
+                          {getStatusText(invoice.status)}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          <span>Pre: {invoice.sending_doctor_name}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>
+                            {format(new Date(invoice.issue_date), "d. M. yyyy", { locale: sk })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {invoice.paid_at && (
+                        <div className="text-sm text-green-600">
+                          Uhradená: {format(new Date(invoice.paid_at), "d. M. yyyy 'o' HH:mm", { locale: sk })}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="text-right">
+                      <div className="flex items-center gap-1 text-lg font-bold text-primary">
+                        <Euro className="h-5 w-5" />
+                        {invoice.total_amount}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {invoice.patient_count} pacientov
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default IssuedInvoicesList;
+

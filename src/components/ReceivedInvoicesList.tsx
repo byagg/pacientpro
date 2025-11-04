@@ -3,10 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Calendar, User, DollarSign, Loader2, Eye } from "lucide-react";
+import { FileText, Calendar, User, DollarSign, Loader2, Eye, Check } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
-import { useReceivingInvoices, useInvoiceItems, type InvoiceWithDetails } from "@/hooks/use-invoices";
+import { useReceivingInvoices, useInvoiceItems, useMarkInvoicePaid, type InvoiceWithDetails } from "@/hooks/use-invoices";
 
 interface ReceivedInvoicesListProps {
   receivingDoctorId: string;
@@ -16,6 +16,7 @@ const ReceivedInvoicesList = ({ receivingDoctorId }: ReceivedInvoicesListProps) 
   const { data: invoices = [], isLoading } = useReceivingInvoices(receivingDoctorId);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceWithDetails | null>(null);
   const { data: invoiceItems = [] } = useInvoiceItems(selectedInvoice?.id || "");
+  const markPaid = useMarkInvoicePaid();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -105,16 +106,31 @@ const ReceivedInvoicesList = ({ receivingDoctorId }: ReceivedInvoicesListProps) 
                     </div>
                   </div>
                   
-                  <div className="border-t pt-3 mt-3">
+                  <div className="border-t pt-3 mt-3 flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full"
+                      className="flex-1"
                       onClick={() => setSelectedInvoice(invoice)}
                     >
                       <Eye className="mr-2 h-4 w-4" />
-                      Zobraziť detail
+                      Detail
                     </Button>
+                    {invoice.status === 'pending' && (
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => markPaid.mutate(invoice.id)}
+                        disabled={markPaid.isPending}
+                      >
+                        {markPaid.isPending ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Check className="mr-2 h-4 w-4" />
+                        )}
+                        Uhradiť
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

@@ -1,0 +1,232 @@
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Calculator, FileText, Loader2, Euro } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { sql } from "@/integrations/neon/client";
+import { useCreateInvoice } from "@/hooks/use-invoices";
+import { format } from "date-fns";
+import { sk } from "date-fns/locale";
+
+interface ReceivingInvoiceCreatorProps {
+  receivingDoctorId: string;
+}
+
+interface ExaminedPatient {
+  id: string;
+  patient_number: string;
+  user_id: string;
+  sending_doctor_name: string;
+  appointment_date: string;
+  examined_at: string;
+  procedure_type: string;
+}
+
+const PATIENT_FEE = 14; // € per patient
+
+const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorProps) => {
+  const [selectedPatients, setSelectedPatients] = useState<string[]>([]);
+  const createInvoice = useCreateInvoice();
+
+  // Fetch examined patients from last year that haven't been invoiced yet
+  const { data: patients = [], isLoading } = useQuery({
+    queryKey: ["examined-patients-for-invoice", receivingDoctorId],
+    queryFn: async () => {
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+      const result = await sql<ExaminedPatient[]>`
+        SELECT 
+          a.id,
+          a.patient_number,
+          a.user_id,
+          p.full_name as sending_doctor_name,
+          a.appointment_date,
+          a.examined_at,
+          a.notes as procedure_type
+        FROM public.appointments a
+        JOIN public.profiles p ON a.user_id = p.id
+        WHERE a.status = 'completed'
+          AND a.examined_at IS NOT NULL
+          AND a.examined_at >= ${oneYearAgo.toISOString()}
+          AND NOT EXISTS (
+            SELECT 1 FROM public.invoice_items ii
+            WHERE ii.appointment_id = a.id
+          )
+        ORDER BY a.examined_at DESC
+      `;
+      
+      return result;
+    },
+    enabled: !!receivingDoctorId,
+  });
+
+  // Group patients by sending doctor
+  const patientsBySendingDoctor = patients.reduce((acc, patient) => {
+    if (!acc[patient.user_id]) {
+      acc[patient.user_id] = {
+        doctorName: patient.sending_doctor_name,
+        patients: [],
+      };
+    }
+    acc[patient.user_id].patients.push(patient);
+    return acc;
+  }, {} as Record<string, { doctorName: string; patients: ExaminedPatient[] }>);
+
+  const handleTogglePatient = (patientId: string) => {
+    setSelectedPatients(prev =>
+      prev.includes(patientId)
+        ? prev.filter(id => id !== patientId)
+        : [...prev, patientId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedPatients.length === patients.length) {
+      setSelectedPatients([]);
+    } else {
+      setSelectedPatients(patients.map(p => p.id));
+    }
+  };
+
+  const handleCreateInvoice = async (sendingDoctorId: string) => {
+    const patientsForDoctor = patients.filter(
+      p => p.user_id === sendingDoctorId && selectedPatients.includes(p.id)
+    );
+
+    if (patientsForDoctor.length === 0) return;
+
+    const totalAmount = patientsForDoctor.length * PATIENT_FEE;
+
+    await createInvoice.mutateAsync({
+      sending_doctor_id: sendingDoctorId,
+      receiving_doctor_id: receivingDoctorId,
+      appointment_ids: patientsForDoctor.map(p => p.id),
+      total_amount: totalAmount,
+      notes: `Manipulačné poplatky za ${patientsForDoctor.length} vyšetrených pacientov`,
+    });
+
+    // Clear selection after successful invoice creation
+    setSelectedPatients(prev => prev.filter(id => !patientsForDoctor.map(p => p.id).includes(id)));
+  };
+
+  const calculateTotal = () => {
+    return selectedPatients.length * PATIENT_FEE;
+  };
+
+  if (isLoading) {
+    return (
+      <Card className="shadow-card">
+        <CardContent className="py-8 text-center">
+          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="shadow-card">
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <FileText className="h-5 w-5 text-primary" />
+          <CardTitle>Vystavenie faktúry</CardTitle>
+        </div>
+        <CardDescription>
+          Vyberte vyšetrených pacientov a vytvorte faktúru pre odosielajúceho lekára
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {patients.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">
+            Žiadni vyšetrení pacienti bez faktúry
+          </p>
+        ) : (
+          <div className="space-y-6">
+            {/* Calculator */}
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-primary" />
+                  <span className="font-semibold">Kalkulačka</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAll}
+                >
+                  {selectedPatients.length === patients.length ? "Zrušiť výber" : "Vybrať všetkých"}
+                </Button>
+              </div>
+              <div className="flex items-center justify-between text-lg">
+                <span className="text-muted-foreground">
+                  {selectedPatients.length} pacientov × {PATIENT_FEE} €
+                </span>
+                <div className="flex items-center gap-1 font-bold text-primary text-2xl">
+                  <Euro className="h-6 w-6" />
+                  {calculateTotal().toFixed(2)}
+                </div>
+              </div>
+            </div>
+
+            {/* Patients grouped by sending doctor */}
+            {Object.entries(patientsBySendingDoctor).map(([doctorId, { doctorName, patients: doctorPatients }]) => {
+              const selectedFromThisDoctor = doctorPatients.filter(p => 
+                selectedPatients.includes(p.id)
+              ).length;
+              const totalForDoctor = selectedFromThisDoctor * PATIENT_FEE;
+
+              return (
+                <div key={doctorId} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-lg">{doctorName}</h3>
+                    {selectedFromThisDoctor > 0 && (
+                      <Button
+                        onClick={() => handleCreateInvoice(doctorId)}
+                        disabled={createInvoice.isPending}
+                        size="sm"
+                      >
+                        {createInvoice.isPending ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <FileText className="mr-2 h-4 w-4" />
+                        )}
+                        Vytvoriť faktúru ({totalForDoctor.toFixed(2)} €)
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    {doctorPatients.map((patient) => (
+                      <div
+                        key={patient.id}
+                        className="flex items-center gap-3 p-3 border rounded hover:bg-muted/50 transition-colors"
+                      >
+                        <Checkbox
+                          checked={selectedPatients.includes(patient.id)}
+                          onCheckedChange={() => handleTogglePatient(patient.id)}
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium">{patient.patient_number}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Vyšetrený: {format(new Date(patient.examined_at), "d. M. yyyy 'o' HH:mm", { locale: sk })}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold">{PATIENT_FEE} €</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default ReceivingInvoiceCreator;
+

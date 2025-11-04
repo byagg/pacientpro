@@ -11,6 +11,7 @@ export interface Invoice {
   patient_count: number;
   issue_date: string;
   status: string;
+  paid_at: string | null;
   notes: string | null;
   created_at: string;
 }
@@ -185,6 +186,40 @@ export const useInvoiceItems = (invoiceId: string) => {
       return items;
     },
     enabled: !!invoiceId,
+  });
+};
+
+// Mark invoice as paid
+export const useMarkInvoicePaid = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const result = await sql`
+        UPDATE public.invoices
+        SET status = 'paid',
+            paid_at = NOW()
+        WHERE id = ${invoiceId}
+        RETURNING *
+      `;
+      return result[0];
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices-sending"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices-receiving"] });
+      toast({
+        title: "Faktúra uhradená",
+        description: "Faktúra bola označená ako uhradená",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Chyba",
+        description: error.message || "Nepodarilo sa označiť faktúru ako uhradenú",
+      });
+    },
   });
 };
 

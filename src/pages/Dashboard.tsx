@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Calendar, UserCheck, UserPlus, ClipboardList, FileText, Settings, Clock } from "lucide-react";
+import { LogOut, Calendar, UserCheck, UserPlus, ClipboardList, FileText, Settings, Clock, Users } from "lucide-react";
 import AppointmentForm from "@/components/AppointmentForm";
 import AppointmentsList from "@/components/AppointmentsList";
 import OfficeHoursSettings from "@/components/OfficeHoursSettings";
@@ -14,7 +14,9 @@ import ExaminedPatientsList from "@/components/ExaminedPatientsList";
 import InvoiceDataSettings from "@/components/InvoiceDataSettings";
 import InvoiceCalculator from "@/components/InvoiceCalculator";
 import SentInvoicesList from "@/components/SentInvoicesList";
-import ReceivedInvoicesList from "@/components/ReceivedInvoicesList";
+import PaidInvoicesList from "@/components/PaidInvoicesList";
+import ReceivingInvoiceCreator from "@/components/ReceivingInvoiceCreator";
+import IssuedInvoicesList from "@/components/IssuedInvoicesList";
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -99,12 +101,12 @@ const Dashboard = () => {
                     Ordinačné hodiny
                   </TabsTrigger>
                   <TabsTrigger value="section2" className="gap-2">
-                    <UserCheck className="h-4 w-4" />
-                    Vyšetrení pacienti
+                    <Users className="h-4 w-4" />
+                    Pacienti
                   </TabsTrigger>
                   <TabsTrigger value="section3" className="gap-2">
-                    <Settings className="h-4 w-4" />
-                    Nastavenia
+                    <FileText className="h-4 w-4" />
+                    Faktúry
                   </TabsTrigger>
                 </>
               ) : (
@@ -130,16 +132,17 @@ const Dashboard = () => {
               <>
                 <TabsContent value="section1" className="space-y-6">
                   <OfficeHoursSettings receivingDoctorId={user.id} />
-                  <WaitingPatientsList receivingDoctorId={user.id} />
                 </TabsContent>
 
                 <TabsContent value="section2" className="space-y-6">
+                  <WaitingPatientsList receivingDoctorId={user.id} />
                   <ExaminedPatientsList receivingDoctorId={user.id} />
-                  <ReceivedInvoicesList receivingDoctorId={user.id} />
                 </TabsContent>
 
                 <TabsContent value="section3" className="space-y-6">
                   <InvoiceDataSettings userId={user.id} />
+                  <ReceivingInvoiceCreator receivingDoctorId={user.id} />
+                  <IssuedInvoicesList receivingDoctorId={user.id} />
                 </TabsContent>
               </>
             ) : (
@@ -153,9 +156,10 @@ const Dashboard = () => {
                 </TabsContent>
 
                 <TabsContent value="section2" className="space-y-6">
+                  <InvoiceCalculator userId={user.id} />
                   <div className="grid gap-6 md:grid-cols-2">
-                    <InvoiceCalculator userId={user.id} />
                     <SentInvoicesList userId={user.id} />
+                    <PaidInvoicesList />
                   </div>
                 </TabsContent>
 
