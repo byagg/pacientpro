@@ -82,20 +82,29 @@ export const useUpdateProfile = () => {
       `;
 
       try {
-        const result: any[] = await sql.unsafe(query, [...values, userId]);
+        console.log('Executing update query:', query, 'with values:', [...values, userId]);
+        const result = await sql.unsafe(query, [...values, userId]);
+        console.log('Raw SQL result:', result);
         
-        if (!result || result.length === 0) {
-          throw new Error('Failed to update profile');
+        // sql.unsafe returns rows directly, not wrapped in an array
+        const rows = Array.isArray(result) ? result : [result];
+        
+        if (!rows || rows.length === 0) {
+          throw new Error('Failed to update profile - no rows returned');
         }
         
-        return { profile: result[0] as Profile, userId };
+        const profile = rows[0] as Profile;
+        console.log('Returning profile:', profile);
+        
+        return profile;
       } catch (error) {
         console.error('Error updating profile:', error);
         throw error;
       }
     },
-    onSuccess: (data) => {
-      // Invalidate using userId from the mutation context
+    onSuccess: (profile: Profile) => {
+      // Invalidate the specific profile query
+      queryClient.invalidateQueries({ queryKey: ["profile", profile.id] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       toast({
         title: "Profil aktualizovaný",

@@ -75,15 +75,14 @@ const InvoiceDataSettings = ({ userId }: InvoiceDataSettingsProps) => {
       setIsEditing(false);
       setErrors({});
       
-      // Nemusíme invalidovať manuálne, updateProfile to už robí
-      // ale zabezpečíme, že formData je aktualizovaný z výsledku
-      if (result && result.profile) {
+      // Aktualizujeme formData z výsledku
+      if (result) {
         setFormData({
-          invoice_name: result.profile.invoice_name || "",
-          invoice_address: result.profile.invoice_address || "",
-          bank_account: result.profile.bank_account || "",
-          invoice_ico: result.profile.invoice_ico || "",
-          invoice_dic: result.profile.invoice_dic || "",
+          invoice_name: result.invoice_name || "",
+          invoice_address: result.invoice_address || "",
+          bank_account: result.bank_account || "",
+          invoice_ico: result.invoice_ico || "",
+          invoice_dic: result.invoice_dic || "",
         });
       }
     } catch (error) {
