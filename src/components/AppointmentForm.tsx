@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { CalendarPlus, Loader2, Clock } from "lucide-react";
 import { z } from "zod";
@@ -52,10 +53,10 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
   }, [selectedDate, availableSlots, userType]);
 
   // Get unique available dates from slots (for sending doctor)
-  const availableDates = useMemo(() => {
+  const availableDatesForCalendar = useMemo(() => {
     if (userType === 'receiving' || availableSlots.length === 0) return [];
     
-    const dates = new Set<string>();
+    const dates: Date[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -66,15 +67,15 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
       
       const slots = generateTimeSlotsForDate(checkDate, availableSlots);
       if (slots.length > 0) {
-        const year = checkDate.getFullYear();
-        const month = String(checkDate.getMonth() + 1).padStart(2, '0');
-        const day = String(checkDate.getDate()).padStart(2, '0');
-        dates.add(`${year}-${month}-${day}`);
+        dates.push(new Date(checkDate));
       }
     }
     
-    return Array.from(dates).sort();
+    return dates;
   }, [availableSlots, userType]);
+
+  // Convert selected date string to Date object for calendar
+  const selectedDateObj = selectedDate ? new Date(selectedDate) : undefined;
 
   // Format current date/time for datetime-local input
   const getCurrentDateTime = () => {
@@ -141,7 +142,6 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
       });
 
       // Reset form
-      setAmbulanceCode("AA");
       setSelectedDate("");
       setSelectedSlot("");
       setAppointmentDate("");
@@ -211,28 +211,48 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
             />
           </div>
           ) : (
-            // Sending doctor: date picker + slot selector
+            // Sending doctor: calendar + slot selector
             <>
               <div className="space-y-2">
-                <Label htmlFor="selectedDate">Dátum vyšetrenia *</Label>
-                <Input
-                  id="selectedDate"
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => {
-                    setSelectedDate(e.target.value);
-                    setSelectedSlot(""); // Reset slot when date changes
+                <Label>Dátum vyšetrenia *</Label>
+                <Calendar
+                  mode="single"
+                  selected={selectedDateObj}
+                  onSelect={(date) => {
+                    if (date) {
+                      const year = date.getFullYear();
+                      const month = String(date.getMonth() + 1).padStart(2, '0');
+                      const day = String(date.getDate()).padStart(2, '0');
+                      setSelectedDate(`${year}-${month}-${day}`);
+                      setSelectedSlot(""); // Reset slot when date changes
+                    } else {
+                      setSelectedDate("");
+                      setSelectedSlot("");
+                    }
                   }}
-                  required
-                  min={new Date().toISOString().split('T')[0]} // Minimum today
-                  className={selectedDate && !timeSlots.length ? "border-red-500" : ""}
+                  disabled={(date) => {
+                    // Disable past dates
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    if (date < today) return true;
+                    
+                    // Check if date has available slots
+                    const hasSlots = availableDatesForCalendar.some(
+                      availableDate => 
+                        availableDate.getFullYear() === date.getFullYear() &&
+                        availableDate.getMonth() === date.getMonth() &&
+                        availableDate.getDate() === date.getDate()
+                    );
+                    return !hasSlots;
+                  }}
+                  modifiers={{
+                    available: availableDatesForCalendar
+                  }}
+                  modifiersClassNames={{
+                    available: "bg-green-100 text-green-900 font-semibold hover:bg-green-200 dark:bg-green-900 dark:text-green-100"
+                  }}
+                  className="rounded-md border"
                 />
-                {availableDates.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    ✓ Dostupné dni: {availableDates.slice(0, 5).map(d => new Date(d).toLocaleDateString('sk-SK')).join(', ')}
-                    {availableDates.length > 5 && ` a ďalších ${availableDates.length - 5}...`}
-                  </p>
-                )}
                 {selectedDate && timeSlots.length === 0 && (
                   <p className="text-xs text-red-500">
                     ⚠️ V tento deň nie sú dostupné žiadne voľné termíny
