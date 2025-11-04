@@ -53,16 +53,16 @@ const SentInvoicesList = ({ userId }: SentInvoicesListProps) => {
       <CardHeader>
         <div className="flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" />
-          <CardTitle>Odoslané faktúry</CardTitle>
+          <CardTitle>Prijaté faktúry</CardTitle>
         </div>
         <CardDescription>
-          Prehľad faktúr odoslaných prijímajúcim lekárom
+          Faktúry vystavené prijímajúcim lekárom za vyšetrených pacientov
         </CardDescription>
       </CardHeader>
       <CardContent>
         {invoices.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">
-            Zatiaľ nemáte žiadne odoslané faktúry
+            Zatiaľ nemáte žiadne prijaté faktúry
           </p>
         ) : (
           <div className="space-y-3">

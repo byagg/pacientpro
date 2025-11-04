@@ -12,7 +12,6 @@ import OfficeHoursSettings from "@/components/OfficeHoursSettings";
 import WaitingPatientsList from "@/components/WaitingPatientsList";
 import ExaminedPatientsList from "@/components/ExaminedPatientsList";
 import InvoiceDataSettings from "@/components/InvoiceDataSettings";
-import InvoiceCalculator from "@/components/InvoiceCalculator";
 import SentInvoicesList from "@/components/SentInvoicesList";
 import PaidInvoicesList from "@/components/PaidInvoicesList";
 import ReceivingInvoiceCreator from "@/components/ReceivingInvoiceCreator";
@@ -164,13 +163,12 @@ const Dashboard = () => {
                   </div>
                 </TabsContent>
 
-          <TabsContent value="section2" className="space-y-6">
-            <InvoiceCalculator userId={user.id} />
-            <div className="grid gap-6 md:grid-cols-2">
-              <SentInvoicesList userId={user.id} />
-              <PaidInvoicesList userId={user.id} />
-            </div>
-          </TabsContent>
+                <TabsContent value="section2" className="space-y-6">
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <SentInvoicesList userId={user.id} />
+                    <PaidInvoicesList userId={user.id} />
+                  </div>
+                </TabsContent>
 
                 <TabsContent value="section3" className="space-y-6">
                   <InvoiceDataSettings userId={user.id} />
