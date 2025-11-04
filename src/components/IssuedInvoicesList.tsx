@@ -83,10 +83,20 @@ const IssuedInvoicesList = ({ receivingDoctorId }: IssuedInvoicesListProps) => {
   };
 
   const handleDelete = async (invoiceId: string, invoiceNumber: string) => {
+    console.log('Attempting to delete invoice:', invoiceId, invoiceNumber);
+    
     if (!window.confirm(`Naozaj chcete vymazať faktúru ${invoiceNumber}? Táto akcia je nenávratná.`)) {
+      console.log('Delete cancelled by user');
       return;
     }
-    await deleteInvoice.mutateAsync(invoiceId);
+    
+    try {
+      console.log('Deleting invoice...');
+      await deleteInvoice.mutateAsync(invoiceId);
+      console.log('Invoice deleted successfully');
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+    }
   };
 
   if (isLoading) {
@@ -165,7 +175,10 @@ const IssuedInvoicesList = ({ receivingDoctorId }: IssuedInvoicesListProps) => {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => setSelectedInvoiceId(invoice.id)}
+                      onClick={() => {
+                        console.log('Opening invoice preview for:', invoice.id);
+                        setSelectedInvoiceId(invoice.id);
+                      }}
                     >
                       <Eye className="mr-2 h-4 w-4" />
                       Zobraziť
@@ -173,10 +186,19 @@ const IssuedInvoicesList = ({ receivingDoctorId }: IssuedInvoicesListProps) => {
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleDelete(invoice.id, invoice.invoice_number)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('Delete button clicked for invoice:', invoice.id);
+                        handleDelete(invoice.id, invoice.invoice_number);
+                      }}
                       disabled={deleteInvoice.isPending}
+                      title="Vymazať faktúru"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      {deleteInvoice.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </CardContent>

@@ -152,6 +152,44 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
           )}
         </div>
 
+        {/* Action button to create invoice - always visible */}
+        <div className="border-t pt-4 mt-4">
+          <Button
+            onClick={() => {
+              console.log('Creating invoice for doctor:', selectedDoctorId);
+              // Scroll to the invoice creator section
+              const invoiceCreator = document.querySelector('[data-invoice-creator]');
+              console.log('Invoice creator element found:', !!invoiceCreator);
+              
+              if (invoiceCreator) {
+                invoiceCreator.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Small delay to ensure scroll completes
+                setTimeout(() => {
+                  // Dispatch custom event to set the doctor filter
+                  console.log('Dispatching set-doctor-filter event with doctorId:', selectedDoctorId);
+                  window.dispatchEvent(new CustomEvent('set-doctor-filter', { 
+                    detail: { doctorId: selectedDoctorId } 
+                  }));
+                }, 500);
+              } else {
+                console.error('Invoice creator section not found!');
+                alert('Sekcia vytvorenia faktúry nebola nájdená. Prosím, skrolujte manuálne nižšie.');
+              }
+            }}
+            className="w-full gap-2"
+            variant="default"
+            disabled={!selectedDoctorId}
+          >
+            <Plus className="h-4 w-4" />
+            Vytvoriť faktúru pre tohto lekára
+          </Button>
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            {!selectedDoctorId 
+              ? "Najprv vyberte lekára z dropdownu vyššie" 
+              : "Prejde na sekciu vytvorenia faktúry nižšie"}
+          </p>
+        </div>
+
         {!selectedDoctorId ? (
           <div className="py-8 text-center text-muted-foreground">
             <p>Vyberte lekára pre zobrazenie údajov</p>
@@ -223,34 +261,6 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Action button to create invoice */}
-            <div className="border-t pt-4 mt-4">
-              <Button
-                onClick={() => {
-                  // Scroll to the invoice creator section
-                  const invoiceCreator = document.querySelector('[data-invoice-creator]');
-                  if (invoiceCreator) {
-                    invoiceCreator.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    // Small delay to ensure scroll completes
-                    setTimeout(() => {
-                      // Dispatch custom event to set the doctor filter
-                      window.dispatchEvent(new CustomEvent('set-doctor-filter', { 
-                        detail: { doctorId: selectedDoctorId } 
-                      }));
-                    }, 500);
-                  }
-                }}
-                className="w-full gap-2"
-                variant="default"
-              >
-                <Plus className="h-4 w-4" />
-                Vytvoriť faktúru pre tohto lekára
-              </Button>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Prejde na sekciu vytvorenia faktúry nižšie
-              </p>
             </div>
 
             {!hasCompleteData && (

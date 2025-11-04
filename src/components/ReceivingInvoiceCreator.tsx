@@ -156,15 +156,25 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
   // Listen for doctor filter events from SendingDoctorInvoiceData
   useEffect(() => {
     const handleSetDoctorFilter = (event: any) => {
+      console.log('Received set-doctor-filter event:', event);
       const doctorId = event.detail?.doctorId;
+      console.log('Doctor ID from event:', doctorId);
+      
       if (doctorId) {
+        console.log('Setting doctor filter to:', doctorId);
         setSelectedDoctorFilter(doctorId);
         setSearchTerm(""); // Clear search when filter is set
+      } else {
+        console.warn('No doctorId in event detail');
       }
     };
 
+    console.log('Setting up set-doctor-filter event listener');
     window.addEventListener('set-doctor-filter', handleSetDoctorFilter);
-    return () => window.removeEventListener('set-doctor-filter', handleSetDoctorFilter);
+    return () => {
+      console.log('Cleaning up set-doctor-filter event listener');
+      window.removeEventListener('set-doctor-filter', handleSetDoctorFilter);
+    };
   }, []);
 
   if (isLoading) {
