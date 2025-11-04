@@ -16,7 +16,7 @@ interface ReceivingInvoiceCreatorProps {
 interface ExaminedPatient {
   id: string;
   patient_number: string;
-  user_id: string;
+  angiologist_id: string;
   sending_doctor_name: string;
   appointment_date: string;
   examined_at: string;
@@ -40,13 +40,13 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
         SELECT 
           a.id,
           a.patient_number,
-          a.user_id,
+          a.angiologist_id,
           p.full_name as sending_doctor_name,
           a.appointment_date,
           a.examined_at,
           a.notes as procedure_type
         FROM public.appointments a
-        JOIN public.profiles p ON a.user_id = p.id
+        JOIN public.profiles p ON a.angiologist_id = p.id
         WHERE a.status = 'completed'
           AND a.examined_at IS NOT NULL
           AND a.examined_at >= ${oneYearAgo.toISOString()}
@@ -64,13 +64,13 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
 
   // Group patients by sending doctor
   const patientsBySendingDoctor = patients.reduce((acc, patient) => {
-    if (!acc[patient.user_id]) {
-      acc[patient.user_id] = {
+    if (!acc[patient.angiologist_id]) {
+      acc[patient.angiologist_id] = {
         doctorName: patient.sending_doctor_name,
         patients: [],
       };
     }
-    acc[patient.user_id].patients.push(patient);
+    acc[patient.angiologist_id].patients.push(patient);
     return acc;
   }, {} as Record<string, { doctorName: string; patients: ExaminedPatient[] }>);
 
@@ -92,7 +92,7 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
 
   const handleCreateInvoice = async (sendingDoctorId: string) => {
     const patientsForDoctor = patients.filter(
-      p => p.user_id === sendingDoctorId && selectedPatients.includes(p.id)
+      p => p.angiologist_id === sendingDoctorId && selectedPatients.includes(p.id)
     );
 
     if (patientsForDoctor.length === 0) return;

@@ -38,7 +38,7 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
           p.id,
           p.full_name
         FROM public.profiles p
-        INNER JOIN public.appointments a ON a.user_id = p.id
+        INNER JOIN public.appointments a ON a.angiologist_id = p.id
         WHERE a.examined_at IS NOT NULL
         ORDER BY p.full_name
       `;
