@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calculator, FileText, Loader2, Euro } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calculator, FileText, Loader2, Euro, Search, Filter } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { sql } from "@/integrations/neon/client";
 import { useCreateInvoice } from "@/hooks/use-invoices";
@@ -27,6 +29,8 @@ const PATIENT_FEE = 14; // € per patient
 
 const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorProps) => {
   const [selectedPatients, setSelectedPatients] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedDoctorFilter, setSelectedDoctorFilter] = useState<string>("all");
   const createInvoice = useCreateInvoice();
 
   // Fetch examined patients from last year that haven't been invoiced yet
@@ -62,8 +66,24 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
     enabled: !!receivingDoctorId,
   });
 
-  // Group patients by sending doctor
-  const patientsBySendingDoctor = patients.reduce((acc, patient) => {
+  // Filter patients
+  const filteredPatients = useMemo(() => {
+    return patients.filter(patient => {
+      // Search filter
+      const matchesSearch = searchTerm === "" || 
+        patient.patient_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        patient.sending_doctor_name.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Doctor filter
+      const matchesDoctor = selectedDoctorFilter === "all" || 
+        patient.angiologist_id === selectedDoctorFilter;
+      
+      return matchesSearch && matchesDoctor;
+    });
+  }, [patients, searchTerm, selectedDoctorFilter]);
+
+  // Group filtered patients by sending doctor
+  const patientsBySendingDoctor = filteredPatients.reduce((acc, patient) => {
     if (!acc[patient.angiologist_id]) {
       acc[patient.angiologist_id] = {
         doctorName: patient.sending_doctor_name,
@@ -74,6 +94,15 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
     return acc;
   }, {} as Record<string, { doctorName: string; patients: ExaminedPatient[] }>);
 
+  // Get unique doctors for filter dropdown
+  const uniqueDoctors = useMemo(() => {
+    const doctorsMap = new Map<string, string>();
+    patients.forEach(patient => {
+      doctorsMap.set(patient.angiologist_id, patient.sending_doctor_name);
+    });
+    return Array.from(doctorsMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [patients]);
+
   const handleTogglePatient = (patientId: string) => {
     setSelectedPatients(prev =>
       prev.includes(patientId)
@@ -83,10 +112,10 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
   };
 
   const handleSelectAll = () => {
-    if (selectedPatients.length === patients.length) {
+    if (selectedPatients.length === filteredPatients.length) {
       setSelectedPatients([]);
     } else {
-      setSelectedPatients(patients.map(p => p.id));
+      setSelectedPatients(filteredPatients.map(p => p.id));
     }
   };
 
@@ -143,6 +172,45 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
           </p>
         ) : (
           <div className="space-y-6">
+            {/* Filters */}
+            <div className="flex gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Hľadať pacienta alebo lekára..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+              <div className="w-64">
+                <Select value={selectedDoctorFilter} onValueChange={setSelectedDoctorFilter}>
+                  <SelectTrigger>
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      <SelectValue placeholder="Všetci lekári" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Všetci lekári</SelectItem>
+                    {uniqueDoctors.map((doctor) => (
+                      <SelectItem key={doctor.id} value={doctor.id}>
+                        {doctor.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {filteredPatients.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                Žiadni pacienti nevyhovujú filtru
+              </p>
+            ) : (
+              <div className="space-y-6">
             {/* Calculator */}
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
@@ -167,6 +235,11 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
                   {calculateTotal().toFixed(2)}
                 </div>
               </div>
+            </div>
+
+            {/* Results info */}
+            <div className="text-sm text-muted-foreground">
+              Zobrazených: {filteredPatients.length} z {patients.length} pacientov
             </div>
 
             {/* Patients grouped by sending doctor */}
@@ -221,6 +294,8 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
                 </div>
               );
             })}
+              </div>
+            )}
           </div>
         )}
       </CardContent>
