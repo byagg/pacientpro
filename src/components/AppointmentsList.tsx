@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, CheckCircle2, DollarSign } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, DollarSign, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
-import { useAppointments } from "@/hooks/use-appointments";
+import { useAppointments, useDeleteAppointment } from "@/hooks/use-appointments";
 import { useCommissions } from "@/hooks/use-commissions";
 
 interface AppointmentsListProps {
@@ -14,6 +15,7 @@ interface AppointmentsListProps {
 const AppointmentsList = ({ userId }: AppointmentsListProps) => {
   const { data: appointments = [], isLoading } = useAppointments(userId);
   const { data: commissions = [] } = useCommissions(userId);
+  const deleteAppointment = useDeleteAppointment();
 
   // Filter appointments - keep only those from the last year
   const filteredAppointments = useMemo(() => {
@@ -57,6 +59,13 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
     }
   };
 
+  const handleDelete = async (appointmentId: string) => {
+    if (!confirm("Naozaj chcete vymazať tohto pacienta? Táto akcia je nenávratná.")) {
+      return;
+    }
+    await deleteAppointment.mutateAsync({ appointmentId, userId });
+  };
+
   if (isLoading) {
     return (
       <Card className="shadow-card">
@@ -93,9 +102,20 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
               return (
                 <div
                   key={appointment.id}
-                  className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                  className="border rounded-lg p-4 hover:bg-muted/50 transition-colors relative"
                 >
-                  <div className="flex justify-between items-start mb-2">
+                  {/* Delete button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => handleDelete(appointment.id)}
+                    disabled={deleteAppointment.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+
+                  <div className="flex justify-between items-start mb-2 pr-10">
                     <div className="flex-1">
                       <p className="font-semibold text-lg">
                         Pacient: {appointment.patient_number}

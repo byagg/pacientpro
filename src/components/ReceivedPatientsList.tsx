@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, User, CheckCircle2, Loader2, DollarSign } from "lucide-react";
+import { Calendar, Clock, User, CheckCircle2, Loader2, DollarSign, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useReceivedPatients, useMarkPatientExamined } from "@/hooks/use-received-patients";
 import { useCommissions, useMarkCommissionPaid } from "@/hooks/use-commissions";
+import { useDeleteAppointment } from "@/hooks/use-appointments";
 import { useToast } from "@/hooks/use-toast";
 
 interface ReceivedPatientsListProps {
@@ -20,6 +21,7 @@ const ReceivedPatientsList = ({ receivingDoctorId }: ReceivedPatientsListProps) 
   const { data: allCommissions = [] } = useCommissions(receivingDoctorId);
   const markExamined = useMarkPatientExamined();
   const markPaid = useMarkCommissionPaid();
+  const deleteAppointment = useDeleteAppointment();
   const { toast } = useToast();
 
   const [examinedTime, setExaminedTime] = useState<{ [key: string]: string }>({});
@@ -99,6 +101,13 @@ const ReceivedPatientsList = ({ receivingDoctorId }: ReceivedPatientsListProps) 
     return commissions.find((c) => c.appointment_id === appointmentId);
   };
 
+  const handleDelete = async (appointmentId: string) => {
+    if (!confirm("Naozaj chcete vymazať tohto pacienta? Táto akcia je nenávratná.")) {
+      return;
+    }
+    await deleteAppointment.mutateAsync({ appointmentId, userId: receivingDoctorId });
+  };
+
   if (isLoading) {
     return (
       <Card className="shadow-card">
@@ -143,9 +152,20 @@ const ReceivedPatientsList = ({ receivingDoctorId }: ReceivedPatientsListProps) 
                 {waitingPatients.map((patient) => (
               <div
                 key={patient.id}
-                className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                className="border rounded-lg p-4 hover:bg-muted/50 transition-colors relative"
               >
-                <div className="flex justify-between items-start mb-3">
+                {/* Delete button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 h-8 w-8 text-muted-foreground hover:text-destructive"
+                  onClick={() => handleDelete(patient.id)}
+                  disabled={deleteAppointment.isPending}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+
+                <div className="flex justify-between items-start mb-3 pr-10">
                   <div className="flex-1">
                     <p className="font-semibold text-lg">
                       Pacient: {patient.patient_number}
@@ -241,9 +261,20 @@ const ReceivedPatientsList = ({ receivingDoctorId }: ReceivedPatientsListProps) 
                   return (
                     <div
                       key={patient.id}
-                      className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                      className="border rounded-lg p-4 hover:bg-muted/50 transition-colors relative"
                     >
-                      <div className="flex justify-between items-start mb-3">
+                      {/* Delete button */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleDelete(patient.id)}
+                        disabled={deleteAppointment.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+
+                      <div className="flex justify-between items-start mb-3 pr-10">
                         <div className="flex-1">
                           <p className="font-semibold text-lg">
                             Pacient: {patient.patient_number}

@@ -72,3 +72,38 @@ export const useCreateAppointment = () => {
     },
   });
 };
+
+// Delete appointment
+export const useDeleteAppointment = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ appointmentId, userId }: { appointmentId: string; userId: string }) => {
+      // Delete appointment (will cascade delete commissions)
+      await sql`
+        DELETE FROM public.appointments
+        WHERE id = ${appointmentId}
+      `;
+
+      return { appointmentId, userId };
+    },
+    onSuccess: (data) => {
+      // Invalidate ALL related queries to ensure synchronization
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["commissions"] });
+      queryClient.invalidateQueries({ queryKey: ["received-patients"] });
+      toast({
+        title: "Pacient vymazaný",
+        description: "Pacient bol úspešne odstránený zo zoznamu",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Chyba",
+        description: error.message || "Nepodarilo sa vymazať pacienta",
+      });
+    },
+  });
+};
