@@ -22,6 +22,20 @@ const DAYS_OF_WEEK = [
   { value: 6, label: "Sobota" },
 ];
 
+// Generate time options (every 30 minutes from 00:00 to 23:30)
+const generateTimeOptions = () => {
+  const times = [];
+  for (let hour = 0; hour < 24; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      const timeString = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+      times.push(timeString);
+    }
+  }
+  return times;
+};
+
+const TIME_OPTIONS = generateTimeOptions();
+
 const OfficeHoursSettings = ({ receivingDoctorId }: OfficeHoursSettingsProps) => {
   const { data: officeHours = [], isLoading } = useOfficeHours(receivingDoctorId);
   const createHour = useCreateOfficeHour();
@@ -44,11 +58,15 @@ const OfficeHoursSettings = ({ receivingDoctorId }: OfficeHoursSettingsProps) =>
       return;
     }
 
+    // Convert HH:MM to HH:MM:SS format for database
+    const startTimeFormatted = `${startTime}:00`;
+    const endTimeFormatted = `${endTime}:00`;
+
     await createHour.mutateAsync({
       receiving_doctor_id: receivingDoctorId,
       day_of_week: parseInt(selectedDay),
-      start_time: startTime,
-      end_time: endTime,
+      start_time: startTimeFormatted,
+      end_time: endTimeFormatted,
       slot_duration_minutes: parseInt(slotDuration),
     });
 
@@ -118,32 +136,47 @@ const OfficeHoursSettings = ({ receivingDoctorId }: OfficeHoursSettingsProps) =>
             </div>
             <div className="space-y-2">
               <Label htmlFor="startTime">Začiatok *</Label>
-              <Input
-                id="startTime"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
+              <Select value={startTime} onValueChange={setStartTime}>
+                <SelectTrigger id="startTime">
+                  <SelectValue placeholder="Vyberte čas" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIME_OPTIONS.map((time) => (
+                    <SelectItem key={time} value={time}>
+                      {time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="endTime">Koniec *</Label>
-              <Input
-                id="endTime"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
+              <Select value={endTime} onValueChange={setEndTime}>
+                <SelectTrigger id="endTime">
+                  <SelectValue placeholder="Vyberte čas" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIME_OPTIONS.filter(time => !startTime || time > startTime).map((time) => (
+                    <SelectItem key={time} value={time}>
+                      {time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="duration">Dĺžka (min) *</Label>
-              <Input
-                id="duration"
-                type="number"
-                value={slotDuration}
-                onChange={(e) => setSlotDuration(e.target.value)}
-                min="30"
-                step="30"
-              />
+              <Select value={slotDuration} onValueChange={setSlotDuration}>
+                <SelectTrigger id="duration">
+                  <SelectValue placeholder="Vyberte dĺžku" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">30 minút</SelectItem>
+                  <SelectItem value="60">60 minút</SelectItem>
+                  <SelectItem value="90">90 minút</SelectItem>
+                  <SelectItem value="120">120 minút</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <Button
