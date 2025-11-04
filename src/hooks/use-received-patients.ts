@@ -61,6 +61,7 @@ export const useMarkPatientExamined = () => {
       examinedAt: string; // ISO timestamp
       examinedBy: string;
     }) => {
+      // Update appointment - mark as examined
       const [appointment] = await sql<Appointment[]>`
         UPDATE public.appointments
         SET 
@@ -71,15 +72,30 @@ export const useMarkPatientExamined = () => {
         WHERE id = ${appointmentId}
         RETURNING *
       `;
+
+      // Create commission if it doesn't exist
+      const existingCommissions = await sql`
+        SELECT id FROM public.commissions
+        WHERE appointment_id = ${appointmentId}
+      `;
+
+      if (existingCommissions.length === 0) {
+        await sql`
+          INSERT INTO public.commissions (angiologist_id, appointment_id, amount, status)
+          VALUES (${appointment.angiologist_id}, ${appointmentId}, 50.00, 'pending')
+        `;
+      }
+
       return appointment;
     },
     onSuccess: (data) => {
-      // Invalidate both received patients and sending doctor's appointments
+      // Invalidate ALL related queries to ensure synchronization
       queryClient.invalidateQueries({ queryKey: ["received-patients"] });
-      queryClient.invalidateQueries({ queryKey: ["appointments", data.angiologist_id] });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["commissions"] });
       toast({
         title: "Pacient označený ako vyšetrený",
-        description: "Čas vyšetrenia bol uložený.",
+        description: "Čas vyšetrenia bol uložený a manipulačný poplatok bol vytvorený.",
       });
     },
     onError: (error: Error) => {

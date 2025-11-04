@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Calendar, Clock, CheckCircle2, DollarSign, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
-import { useAppointments, useMarkAppointmentExamined } from "@/hooks/use-appointments";
+import { useAppointments } from "@/hooks/use-appointments";
 import { useCommissions, useMarkCommissionPaid } from "@/hooks/use-commissions";
 
 interface AppointmentsListProps {
@@ -16,10 +16,8 @@ interface AppointmentsListProps {
 const AppointmentsList = ({ userId }: AppointmentsListProps) => {
   const { data: appointments = [], isLoading } = useAppointments(userId);
   const { data: commissions = [] } = useCommissions(userId);
-  const markExamined = useMarkAppointmentExamined();
   const markPaid = useMarkCommissionPaid();
 
-  const [examinedTime, setExaminedTime] = useState<{ [key: string]: string }>({});
   const [paidTime, setPaidTime] = useState<{ [key: string]: string }>({});
 
   // Format current date/time for datetime-local input
@@ -33,25 +31,8 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  const handleSetNow = (appointmentId: string, type: 'examined' | 'paid') => {
-    if (type === 'examined') {
-      setExaminedTime({ ...examinedTime, [appointmentId]: getCurrentDateTime() });
-    } else {
-      setPaidTime({ ...paidTime, [appointmentId]: getCurrentDateTime() });
-    }
-  };
-
-  const handleMarkExamined = async (appointmentId: string) => {
-    const time = examinedTime[appointmentId] || getCurrentDateTime();
-    const examinedAt = new Date(time).toISOString();
-
-    await markExamined.mutateAsync({
-      appointmentId,
-      examinedAt,
-      examinedBy: userId,
-    });
-
-    setExaminedTime({ ...examinedTime, [appointmentId]: "" });
+  const handleSetNow = (appointmentId: string) => {
+    setPaidTime({ ...paidTime, [appointmentId]: getCurrentDateTime() });
   };
 
   const handleMarkPaid = async (commissionId: string, appointmentId: string) => {
@@ -179,61 +160,9 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
                     </p>
                   )}
 
-                  {/* Actions */}
-                  <div className="border-t pt-3 mt-3 space-y-3">
-                    {/* Mark as examined */}
-                    {!isExamined && (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor={`examined-time-${appointment.id}`} className="text-sm font-medium">
-                            Čas vyšetrenia:
-                          </Label>
-                          <div className="flex-1 flex items-center gap-2">
-                            <input
-                              id={`examined-time-${appointment.id}`}
-                              type="datetime-local"
-                              value={examinedTime[appointment.id] || ""}
-                              onChange={(e) =>
-                                setExaminedTime({ ...examinedTime, [appointment.id]: e.target.value })
-                              }
-                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleSetNow(appointment.id, 'examined')}
-                              className="gap-1"
-                            >
-                              <Clock className="h-3 w-3" />
-                              Teraz
-                            </Button>
-                          </div>
-                        </div>
-                        <Button
-                          onClick={() => handleMarkExamined(appointment.id)}
-                          disabled={markExamined.isPending}
-                          className="w-full"
-                          size="sm"
-                          variant="outline"
-                        >
-                          {markExamined.isPending ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Ukladám...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle2 className="mr-2 h-4 w-4" />
-                              Označiť ako vyšetreného
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Mark commission as paid */}
-                    {commission && !isPaid && isExamined && (
+                  {/* Actions - only for paying commission */}
+                  {commission && !isPaid && isExamined && (
+                    <div className="border-t pt-3 mt-3 space-y-3">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <Label htmlFor={`paid-time-${appointment.id}`} className="text-sm font-medium">
@@ -253,7 +182,7 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
                               type="button"
                               variant="outline"
                               size="sm"
-                              onClick={() => handleSetNow(appointment.id, 'paid')}
+                              onClick={() => handleSetNow(appointment.id)}
                               className="gap-1"
                             >
                               <Clock className="h-3 w-3" />
@@ -281,8 +210,8 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
                           )}
                         </Button>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

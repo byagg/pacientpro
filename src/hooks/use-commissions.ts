@@ -48,8 +48,10 @@ export const useMarkCommissionPaid = () => {
       return commission;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["commissions", data.angiologist_id] });
-      queryClient.invalidateQueries({ queryKey: ["appointments", data.angiologist_id] });
+      // Invalidate ALL related queries to ensure synchronization
+      queryClient.invalidateQueries({ queryKey: ["commissions"] });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["received-patients"] });
       toast({
         title: "Poplatok označený ako vyplatený",
         description: "Manipulačný poplatok bol úspešne označený.",
