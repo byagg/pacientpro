@@ -21,19 +21,19 @@ interface InvoiceData {
   patient_count: number;
   notes: string | null;
   
-  // Sending doctor (supplier)
+  // Sending doctor (odosielajúci lekár - ODBERATEĽ, platí za službu)
   sending_doctor_name: string;
   sending_doctor_address: string | null;
   sending_doctor_ico: string | null;
   sending_doctor_dic: string | null;
-  sending_doctor_bank_account: string | null;
-  sending_doctor_signature: string | null;
   
-  // Receiving doctor (customer)
+  // Receiving doctor (prijímajúci lekár - DODÁVATEĽ, poskytol službu vyšetrenia)
   receiving_doctor_name: string;
   receiving_doctor_address: string | null;
   receiving_doctor_ico: string | null;
   receiving_doctor_dic: string | null;
+  receiving_doctor_bank_account: string | null; // IBAN dodávateľa (kam platiť)
+  receiving_doctor_signature: string | null; // Podpis dodávateľa
 }
 
 interface InvoiceItem {
@@ -60,13 +60,13 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
           s.invoice_address as sending_doctor_address,
           s.invoice_ico as sending_doctor_ico,
           s.invoice_dic as sending_doctor_dic,
-          s.bank_account as sending_doctor_bank_account,
-          s.signature_image as sending_doctor_signature,
           
           COALESCE(r.invoice_name, r.full_name) as receiving_doctor_name,
           r.invoice_address as receiving_doctor_address,
           r.invoice_ico as receiving_doctor_ico,
-          r.invoice_dic as receiving_doctor_dic
+          r.invoice_dic as receiving_doctor_dic,
+          r.bank_account as receiving_doctor_bank_account,
+          r.signature_image as receiving_doctor_signature
           
         FROM public.invoices i
         JOIN public.profiles s ON i.sending_doctor_id = s.id
@@ -147,26 +147,9 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
 
           {/* Supplier and Customer Info */}
           <div className="grid grid-cols-2 gap-8">
-            {/* Supplier (Sending Doctor) */}
+            {/* Supplier (Receiving Doctor - poskytol službu vyšetrenia) */}
             <div>
               <h2 className="text-sm font-semibold text-gray-500 mb-2">DODÁVATEĽ</h2>
-              <div className="space-y-1">
-                <p className="font-bold text-lg">{invoice.sending_doctor_name}</p>
-                {invoice.sending_doctor_address && (
-                  <p className="text-sm text-gray-700">{invoice.sending_doctor_address}</p>
-                )}
-                {invoice.sending_doctor_ico && (
-                  <p className="text-sm text-gray-700">IČO: {invoice.sending_doctor_ico}</p>
-                )}
-                {invoice.sending_doctor_dic && (
-                  <p className="text-sm text-gray-700">DIČ: {invoice.sending_doctor_dic}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Customer (Receiving Doctor) */}
-            <div>
-              <h2 className="text-sm font-semibold text-gray-500 mb-2">ODBERATEĽ</h2>
               <div className="space-y-1">
                 <p className="font-bold text-lg">{invoice.receiving_doctor_name}</p>
                 {invoice.receiving_doctor_address && (
@@ -177,6 +160,23 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
                 )}
                 {invoice.receiving_doctor_dic && (
                   <p className="text-sm text-gray-700">DIČ: {invoice.receiving_doctor_dic}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Customer (Sending Doctor - platí za službu) */}
+            <div>
+              <h2 className="text-sm font-semibold text-gray-500 mb-2">ODBERATEĽ</h2>
+              <div className="space-y-1">
+                <p className="font-bold text-lg">{invoice.sending_doctor_name}</p>
+                {invoice.sending_doctor_address && (
+                  <p className="text-sm text-gray-700">{invoice.sending_doctor_address}</p>
+                )}
+                {invoice.sending_doctor_ico && (
+                  <p className="text-sm text-gray-700">IČO: {invoice.sending_doctor_ico}</p>
+                )}
+                {invoice.sending_doctor_dic && (
+                  <p className="text-sm text-gray-700">DIČ: {invoice.sending_doctor_dic}</p>
                 )}
               </div>
             </div>
@@ -236,11 +236,11 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
           </div>
 
           {/* Payment Details */}
-          {invoice.sending_doctor_bank_account && (
+          {invoice.receiving_doctor_bank_account && (
             <div className="bg-gray-50 p-4 rounded">
               <h2 className="text-sm font-semibold text-gray-700 mb-2">PLATOBNÉ ÚDAJE</h2>
               <p className="text-sm">
-                <span className="font-semibold">Číslo účtu:</span> {invoice.sending_doctor_bank_account}
+                <span className="font-semibold">Číslo účtu (dodávateľa):</span> {invoice.receiving_doctor_bank_account}
               </p>
               <p className="text-sm">
                 <span className="font-semibold">Variabilný symbol:</span> {invoice.invoice_number.replace(/[^0-9]/g, '')}
@@ -257,11 +257,11 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
           )}
 
           {/* Signature */}
-          {invoice.sending_doctor_signature && (
+          {invoice.receiving_doctor_signature && (
             <div className="flex justify-end mt-8 mb-4">
               <div className="text-center">
                 <img 
-                  src={invoice.sending_doctor_signature} 
+                  src={invoice.receiving_doctor_signature} 
                   alt="Podpis" 
                   className="max-h-16 mb-2 border-b border-gray-400"
                 />
@@ -273,7 +273,7 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
           {/* Footer */}
           <div className="text-xs text-gray-500 text-center pt-4 border-t border-gray-200">
             <p>
-              {invoice.sending_doctor_signature 
+              {invoice.receiving_doctor_signature 
                 ? "Faktúra bola vystavená elektronicky." 
                 : "Faktúra bola vystavená elektronicky a je platná bez podpisu."}
             </p>
