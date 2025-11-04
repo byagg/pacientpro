@@ -33,7 +33,6 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
   const { data: sendingDoctors = [], isLoading: loadingDoctors } = useQuery({
     queryKey: ["sending-doctors-list", receivingDoctorId],
     queryFn: async () => {
-      console.log('Fetching sending doctors for receiving doctor:', receivingDoctorId);
       const result = await sql<SendingDoctor[]>`
         SELECT DISTINCT
           p.id,
@@ -44,7 +43,6 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
           AND (a.examined_by = ${receivingDoctorId} OR a.receiving_doctor_id = ${receivingDoctorId})
         ORDER BY p.full_name
       `;
-      console.log('Found sending doctors:', result.length);
       return result;
     },
     enabled: !!receivingDoctorId,

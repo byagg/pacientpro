@@ -9,6 +9,7 @@ import { useReceivedPatients } from "@/hooks/use-received-patients";
 import { useCommissions, useMarkCommissionPaid } from "@/hooks/use-commissions";
 import { useDeleteAppointment } from "@/hooks/use-appointments";
 import { useToast } from "@/hooks/use-toast";
+import { PATIENT_FEE } from "@/lib/constants";
 
 interface ExaminedPatientsListProps {
   receivingDoctorId: string;
@@ -136,7 +137,7 @@ const ExaminedPatientsList = ({ receivingDoctorId }: ExaminedPatientsListProps) 
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-muted-foreground">Poplatok</p>
-                      <p className="text-xl font-bold text-primary">14 €</p>
+                      <p className="text-xl font-bold text-primary">{PATIENT_FEE} €</p>
                     </div>
                   </div>
                   

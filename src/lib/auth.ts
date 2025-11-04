@@ -95,7 +95,7 @@ export const auth = {
     return session;
   },
 
-  async signIn(email: string, password: string, userType?: 'sending' | 'receiving'): Promise<Session> {
+  async signIn(email: string, password: string): Promise<Session> {
     // Get user from database
     const users = await sql`
       SELECT id, email, full_name, created_at, password_hash, user_type
@@ -114,15 +114,9 @@ export const auth = {
       throw new Error('Nesprávny email alebo heslo');
     }
 
-    // Update user_type if provided and different from stored
-    if (userType && userType !== user.user_type) {
-      await sql`
-        UPDATE profiles
-        SET user_type = ${userType}
-        WHERE id = ${user.id}
-      `;
-      user.user_type = userType;
-    }
+    // SECURITY FIX: Never allow changing user_type from login form
+    // This would allow privilege escalation attacks
+    // user_type is ALWAYS taken from database and set only during registration
 
     // Create session
     const token = crypto.randomUUID();
@@ -132,7 +126,7 @@ export const auth = {
         email: user.email,
         full_name: user.full_name,
         created_at: user.created_at,
-        user_type: (user.user_type || userType) as 'sending' | 'receiving' | undefined,
+        user_type: user.user_type, // ALWAYS from database, never from user input
       },
       token,
     };

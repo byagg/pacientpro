@@ -10,6 +10,7 @@ import { sql } from "@/integrations/neon/client";
 import { useCreateInvoice } from "@/hooks/use-invoices";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
+import { PATIENT_FEE } from "@/lib/constants";
 
 interface ReceivingInvoiceCreatorProps {
   receivingDoctorId: string;
@@ -25,7 +26,7 @@ interface ExaminedPatient {
   procedure_type: string;
 }
 
-const PATIENT_FEE = 14; // € per patient
+// PATIENT_FEE is now centralized in src/lib/constants.ts
 
 const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorProps) => {
   const [selectedPatients, setSelectedPatients] = useState<string[]>([]);
@@ -40,7 +41,6 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
       const oneYearAgo = new Date();
       oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-      console.log('Fetching examined patients for invoice for receiving doctor:', receivingDoctorId);
       const result = await sql<ExaminedPatient[]>`
         SELECT 
           a.id,
@@ -62,7 +62,6 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
           )
         ORDER BY a.examined_at DESC
       `;
-      console.log('Found examined patients:', result.length);
       
       return result;
     },

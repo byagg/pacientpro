@@ -52,7 +52,8 @@ const Auth = () => {
           password,
         });
 
-        await auth.signIn(parsedEmail, parsedPassword, userType);
+        // SECURITY: Don't pass userType to signIn - it's always taken from database
+        await auth.signIn(parsedEmail, parsedPassword);
 
         toast({
           title: "Prihlásenie úspešné",
@@ -119,18 +120,21 @@ const Auth = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleAuth} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="userType">Typ používateľa *</Label>
-              <Select value={userType} onValueChange={(value: 'sending' | 'receiving') => setUserType(value)} required>
-                <SelectTrigger id="userType">
-                  <SelectValue placeholder="Vyberte typ používateľa" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sending">Odosielajúci lekár</SelectItem>
-                  <SelectItem value="receiving">Prijímajúci lekár</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* SECURITY: Only show user type selector during registration, not login */}
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="userType">Typ používateľa *</Label>
+                <Select value={userType} onValueChange={(value: 'sending' | 'receiving') => setUserType(value)} required>
+                  <SelectTrigger id="userType">
+                    <SelectValue placeholder="Vyberte typ používateľa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sending">Odosielajúci lekár</SelectItem>
+                    <SelectItem value="receiving">Prijímajúci lekár</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {!isLogin && (
               <div className="space-y-2">
                 <Label htmlFor="fullName">Celé meno</Label>
