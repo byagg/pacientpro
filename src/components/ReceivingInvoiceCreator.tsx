@@ -40,6 +40,7 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
       const oneYearAgo = new Date();
       oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
+      console.log('Fetching examined patients for invoice for receiving doctor:', receivingDoctorId);
       const result = await sql<ExaminedPatient[]>`
         SELECT 
           a.id,
@@ -54,12 +55,14 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
         WHERE a.status = 'completed'
           AND a.examined_at IS NOT NULL
           AND a.examined_at >= ${oneYearAgo.toISOString()}
+          AND (a.examined_by = ${receivingDoctorId} OR a.receiving_doctor_id = ${receivingDoctorId})
           AND NOT EXISTS (
             SELECT 1 FROM public.invoice_items ii
             WHERE ii.appointment_id = a.id
           )
         ORDER BY a.examined_at DESC
       `;
+      console.log('Found examined patients:', result.length);
       
       return result;
     },
