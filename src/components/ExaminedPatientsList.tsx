@@ -59,13 +59,9 @@ const ExaminedPatientsList = ({ receivingDoctorId }: ExaminedPatientsListProps) 
     });
   };
 
-  const handleDelete = async (appointmentId: string, patientNumber: string) => {
+  const handleDelete = async (appointmentId: string, patientNumber: string, userId: string) => {
     if (confirm(`Naozaj chcete vymazať pacienta ${patientNumber}?`)) {
-      await deleteAppointment.mutateAsync(appointmentId);
-      toast({
-        title: "Pacient vymazaný",
-        description: `Pacient ${patientNumber} bol odstránený`,
-      });
+      await deleteAppointment.mutateAsync({ appointmentId, userId });
     }
   };
 
@@ -168,7 +164,7 @@ const ExaminedPatientsList = ({ receivingDoctorId }: ExaminedPatientsListProps) 
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => handleDelete(patient.id, patient.patient_number)}
+                      onClick={() => handleDelete(patient.id, patient.patient_number, patient.angiologist_id)}
                       disabled={deleteAppointment.isPending}
                     >
                       <Trash2 className="h-3 w-3" />

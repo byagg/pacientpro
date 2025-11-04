@@ -211,89 +211,89 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
               </p>
             ) : (
               <div className="space-y-6">
-            {/* Calculator */}
-            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Calculator className="h-5 w-5 text-primary" />
-                  <span className="font-semibold">Kalkulačka</span>
+                {/* Calculator */}
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Calculator className="h-5 w-5 text-primary" />
+                      <span className="font-semibold">Kalkulačka</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSelectAll}
+                    >
+                      {selectedPatients.length === filteredPatients.length ? "Zrušiť výber" : "Vybrať všetkých"}
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between text-lg">
+                    <span className="text-muted-foreground">
+                      {selectedPatients.length} pacientov × {PATIENT_FEE} €
+                    </span>
+                    <div className="flex items-center gap-1 font-bold text-primary text-2xl">
+                      <Euro className="h-6 w-6" />
+                      {calculateTotal().toFixed(2)}
+                    </div>
+                  </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSelectAll}
-                >
-                  {selectedPatients.length === patients.length ? "Zrušiť výber" : "Vybrať všetkých"}
-                </Button>
-              </div>
-              <div className="flex items-center justify-between text-lg">
-                <span className="text-muted-foreground">
-                  {selectedPatients.length} pacientov × {PATIENT_FEE} €
-                </span>
-                <div className="flex items-center gap-1 font-bold text-primary text-2xl">
-                  <Euro className="h-6 w-6" />
-                  {calculateTotal().toFixed(2)}
+
+                {/* Results info */}
+                <div className="text-sm text-muted-foreground">
+                  Zobrazených: {filteredPatients.length} z {patients.length} pacientov
                 </div>
-              </div>
-            </div>
 
-            {/* Results info */}
-            <div className="text-sm text-muted-foreground">
-              Zobrazených: {filteredPatients.length} z {patients.length} pacientov
-            </div>
+                {/* Patients grouped by sending doctor */}
+                {Object.entries(patientsBySendingDoctor).map(([doctorId, { doctorName, patients: doctorPatients }]) => {
+                  const selectedFromThisDoctor = doctorPatients.filter(p => 
+                    selectedPatients.includes(p.id)
+                  ).length;
+                  const totalForDoctor = selectedFromThisDoctor * PATIENT_FEE;
 
-            {/* Patients grouped by sending doctor */}
-            {Object.entries(patientsBySendingDoctor).map(([doctorId, { doctorName, patients: doctorPatients }]) => {
-              const selectedFromThisDoctor = doctorPatients.filter(p => 
-                selectedPatients.includes(p.id)
-              ).length;
-              const totalForDoctor = selectedFromThisDoctor * PATIENT_FEE;
-
-              return (
-                <div key={doctorId} className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-lg">{doctorName}</h3>
-                    {selectedFromThisDoctor > 0 && (
-                      <Button
-                        onClick={() => handleCreateInvoice(doctorId)}
-                        disabled={createInvoice.isPending}
-                        size="sm"
-                      >
-                        {createInvoice.isPending ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <FileText className="mr-2 h-4 w-4" />
+                  return (
+                    <div key={doctorId} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-lg">{doctorName}</h3>
+                        {selectedFromThisDoctor > 0 && (
+                          <Button
+                            onClick={() => handleCreateInvoice(doctorId)}
+                            disabled={createInvoice.isPending}
+                            size="sm"
+                          >
+                            {createInvoice.isPending ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <FileText className="mr-2 h-4 w-4" />
+                            )}
+                            Vytvoriť faktúru ({totalForDoctor.toFixed(2)} €)
+                          </Button>
                         )}
-                        Vytvoriť faktúru ({totalForDoctor.toFixed(2)} €)
-                      </Button>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    {doctorPatients.map((patient) => (
-                      <div
-                        key={patient.id}
-                        className="flex items-center gap-3 p-3 border rounded hover:bg-muted/50 transition-colors"
-                      >
-                        <Checkbox
-                          checked={selectedPatients.includes(patient.id)}
-                          onCheckedChange={() => handleTogglePatient(patient.id)}
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium">{patient.patient_number}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Vyšetrený: {format(new Date(patient.examined_at), "d. M. yyyy 'o' HH:mm", { locale: sk })}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold">{PATIENT_FEE} €</p>
-                        </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+
+                      <div className="space-y-2">
+                        {doctorPatients.map((patient) => (
+                          <div
+                            key={patient.id}
+                            className="flex items-center gap-3 p-3 border rounded hover:bg-muted/50 transition-colors"
+                          >
+                            <Checkbox
+                              checked={selectedPatients.includes(patient.id)}
+                              onCheckedChange={() => handleTogglePatient(patient.id)}
+                            />
+                            <div className="flex-1">
+                              <p className="font-medium">{patient.patient_number}</p>
+                              <p className="text-sm text-muted-foreground">
+                                Vyšetrený: {format(new Date(patient.examined_at), "d. M. yyyy 'o' HH:mm", { locale: sk })}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold">{PATIENT_FEE} €</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
