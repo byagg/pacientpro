@@ -1,4 +1,4 @@
--- Add bank_account column to profiles table (if it doesn't exist)
+-- Add password_hash column to profiles table (if it doesn't exist)
 -- First ensure profiles table exists
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
--- Add bank_account column if it doesn't exist
+-- Add password_hash column if it doesn't exist
 DO $$ 
 BEGIN
     IF NOT EXISTS (
@@ -15,10 +15,10 @@ BEGIN
         FROM information_schema.columns 
         WHERE table_schema = 'public' 
         AND table_name = 'profiles' 
-        AND column_name = 'bank_account'
+        AND column_name = 'password_hash'
     ) THEN
         ALTER TABLE public.profiles
-        ADD COLUMN bank_account TEXT;
+        ADD COLUMN password_hash TEXT;
     END IF;
 END $$;
 

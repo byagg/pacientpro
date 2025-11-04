@@ -1,8 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Tables } from "@/integrations/supabase/types";
+import { sql } from "@/integrations/neon/client";
 
-type Commission = Tables<"commissions">;
+export interface Commission {
+  id: string;
+  angiologist_id: string;
+  appointment_id: string;
+  amount: number;
+  status: string | null;
+  created_at: string;
+  paid_at: string | null;
+}
 
 export const useCommissions = (userId: string) => {
   return useQuery({
@@ -10,13 +17,12 @@ export const useCommissions = (userId: string) => {
     queryFn: async () => {
       if (!userId) return [];
       
-      const { data, error } = await supabase
-        .from("commissions")
-        .select("*")
-        .eq("angiologist_id", userId)
-        .order("created_at", { ascending: false });
+      const data = await sql`
+        SELECT * FROM commissions
+        WHERE angiologist_id = ${userId}
+        ORDER BY created_at DESC
+      `;
 
-      if (error) throw error;
       return (data as Commission[]) || [];
     },
     enabled: !!userId,

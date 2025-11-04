@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { CalendarPlus, Loader2 } from "lucide-react";
+import { CalendarPlus, Loader2, Clock } from "lucide-react";
 import { z } from "zod";
 import { useCreateAppointment } from "@/hooks/use-appointments";
 const appointmentSchema = z.object({
@@ -27,11 +27,26 @@ interface AppointmentFormProps {
 }
 
 const AppointmentForm = ({ userId }: AppointmentFormProps) => {
-  const [ambulanceCode, setAmbulanceCode] = useState("");
+  const [ambulanceCode, setAmbulanceCode] = useState("AA");
   const [appointmentDate, setAppointmentDate] = useState("");
   const [procedureType, setProcedureType] = useState("");
   const createAppointment = useCreateAppointment();
   const { toast } = useToast();
+
+  // Format current date/time for datetime-local input
+  const getCurrentDateTime = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const handleSetNow = () => {
+    setAppointmentDate(getCurrentDateTime());
+  };
 
   const generatePatientNumber = (code: string, datetime: string) => {
     const date = new Date(datetime);
@@ -65,6 +80,7 @@ const AppointmentForm = ({ userId }: AppointmentFormProps) => {
         patient_number: patientNumber,
         appointment_date: appointmentDateObj.toISOString(),
         notes: procedureType,
+        status: 'scheduled',
       });
 
       // Reset form
@@ -116,7 +132,19 @@ const AppointmentForm = ({ userId }: AppointmentFormProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="appointmentDate">Dátum a čas vyšetrenia *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="appointmentDate">Dátum a čas vyšetrenia *</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSetNow}
+                className="gap-1"
+              >
+                <Clock className="h-3 w-3" />
+                Teraz
+              </Button>
+            </div>
             <Input
               id="appointmentDate"
               type="datetime-local"

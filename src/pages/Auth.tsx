@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { auth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Heart } from "lucide-react";
 import { z } from "zod";
@@ -27,26 +28,17 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [userType, setUserType] = useState<'sending' | 'receiving'>('sending');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     // Check if user is already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/dashboard");
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate("/dashboard");
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    const session = auth.getSession();
+    if (session) {
+      navigate("/dashboard");
+    }
   }, [navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -60,22 +52,14 @@ const Auth = () => {
           password,
         });
 
-        const { error } = await supabase.auth.signInWithPassword({
-          email: parsedEmail,
-          password: parsedPassword,
-        });
-
-        if (error) {
-          if (error.message.includes("Invalid login credentials")) {
-            throw new Error("Nesprávny email alebo heslo");
-          }
-          throw error;
-        }
+        await auth.signIn(parsedEmail, parsedPassword, userType);
 
         toast({
           title: "Prihlásenie úspešné",
           description: "Vitajte späť!",
         });
+        
+        navigate("/dashboard");
       } else {
         const {
           email: parsedEmail,
@@ -87,30 +71,14 @@ const Auth = () => {
           fullName,
         });
 
-        const redirectUrl = `${window.location.origin}/dashboard`;
-        
-        const { error } = await supabase.auth.signUp({
-          email: parsedEmail,
-          password: parsedPassword,
-          options: {
-            emailRedirectTo: redirectUrl,
-            data: {
-              full_name: parsedFullName,
-            },
-          },
-        });
-
-        if (error) {
-          if (error.message.includes("already registered")) {
-            throw new Error("Tento email je už registrovaný");
-          }
-          throw error;
-        }
+        await auth.signUp(parsedEmail, parsedPassword, parsedFullName, userType);
 
         toast({
           title: "Registrácia úspešná",
           description: "Váš účet bol vytvorený. Môžete sa prihlásiť.",
         });
+        
+        setIsLogin(true);
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -151,6 +119,18 @@ const Auth = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleAuth} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="userType">Typ používateľa *</Label>
+              <Select value={userType} onValueChange={(value: 'sending' | 'receiving') => setUserType(value)} required>
+                <SelectTrigger id="userType">
+                  <SelectValue placeholder="Vyberte typ používateľa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sending">Odosielajúci lekár</SelectItem>
+                  <SelectItem value="receiving">Prijímajúci lekár</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {!isLogin && (
               <div className="space-y-2">
                 <Label htmlFor="fullName">Celé meno</Label>

@@ -1,9 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Tables, TablesUpdate } from "@/integrations/supabase/types";
+import { sql } from "@/integrations/neon/client";
 import { useToast } from "@/hooks/use-toast";
 
-type Profile = Tables<"profiles">;
+export interface Profile {
+  id: string;
+  email: string;
+  full_name: string;
+  bank_account: string | null;
+  created_at: string;
+}
+
+export interface ProfileUpdate {
+  email?: string;
+  full_name?: string;
+  bank_account?: string | null;
+}
 
 export const useProfile = (userId: string) => {
   return useQuery({
@@ -11,16 +22,26 @@ export const useProfile = (userId: string) => {
     queryFn: async () => {
       if (!userId) return null;
       
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
+      try {
+        const data = await sql`
+          SELECT id, email, full_name, bank_account, created_at
+          FROM profiles
+          WHERE id = ${userId}
+        `;
 
-      if (error) throw error;
-      return data as Profile | null;
+        if (data.length === 0) {
+          console.warn('Profile not found for user:', userId);
+          return null;
+        }
+        return data[0] as Profile;
+      } catch (err) {
+        console.error('Unexpected error in useProfile:', err);
+        throw err;
+      }
     },
     enabled: !!userId,
+    retry: 1,
+    staleTime: 30000, // Cache for 30 seconds
   });
 };
 
@@ -29,16 +50,50 @@ export const useUpdateProfile = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ userId, updates }: { userId: string; updates: TablesUpdate<"profiles"> }) => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .update(updates)
-        .eq("id", userId)
-        .select()
-        .single();
+    mutationFn: async ({ userId, updates }: { userId: string; updates: ProfileUpdate }) => {
+      // Build update query - only bank_account is used in this app
+      if (updates.bank_account !== undefined) {
+        const [result] = await sql`
+          UPDATE profiles
+          SET bank_account = ${updates.bank_account}
+          WHERE id = ${userId}
+          RETURNING id, email, full_name, bank_account, created_at
+        `;
+        return result as Profile;
+      }
+      
+      // For other fields, build queries separately
+      if (updates.email !== undefined && updates.full_name !== undefined) {
+        const [result] = await sql`
+          UPDATE profiles
+          SET email = ${updates.email}, full_name = ${updates.full_name}
+          WHERE id = ${userId}
+          RETURNING id, email, full_name, bank_account, created_at
+        `;
+        return result as Profile;
+      }
+      
+      if (updates.email !== undefined) {
+        const [result] = await sql`
+          UPDATE profiles
+          SET email = ${updates.email}
+          WHERE id = ${userId}
+          RETURNING id, email, full_name, bank_account, created_at
+        `;
+        return result as Profile;
+      }
+      
+      if (updates.full_name !== undefined) {
+        const [result] = await sql`
+          UPDATE profiles
+          SET full_name = ${updates.full_name}
+          WHERE id = ${userId}
+          RETURNING id, email, full_name, bank_account, created_at
+        `;
+        return result as Profile;
+      }
 
-      if (error) throw error;
-      return data;
+      throw new Error('No updates provided');
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["profile", data.id] });

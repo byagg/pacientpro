@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,34 +16,8 @@ const CommissionsCard = ({ userId }: CommissionsCardProps) => {
   const { data: commissions = [], isLoading } = useCommissions(userId);
   const { data: profile, isLoading: isLoadingProfile } = useProfile(userId);
   const updateProfile = useUpdateProfile();
-  const queryClient = useQueryClient();
   const [bankAccount, setBankAccount] = useState("");
   const [isEditingBankAccount, setIsEditingBankAccount] = useState(false);
-
-  useEffect(() => {
-    if (!userId) return;
-
-    // Set up realtime subscription
-    const channel = supabase
-      .channel('commissions-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'commissions',
-          filter: `angiologist_id=eq.${userId}`,
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["commissions", userId] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, queryClient]);
 
   const totalCommissions = commissions.reduce((sum, c) => sum + Number(c.amount), 0);
   const pendingCommissions = commissions
@@ -57,7 +29,7 @@ const CommissionsCard = ({ userId }: CommissionsCardProps) => {
 
   // Initialize bank account from profile
   useEffect(() => {
-    if (profile?.bank_account !== undefined) {
+    if (profile) {
       setBankAccount(profile.bank_account || "");
     }
   }, [profile]);
@@ -72,7 +44,7 @@ const CommissionsCard = ({ userId }: CommissionsCardProps) => {
     setIsEditingBankAccount(false);
   };
 
-  if (isLoading || isLoadingProfile) {
+  if (isLoading) {
     return (
       <Card className="shadow-card">
         <CardContent className="py-8 text-center text-muted-foreground">
@@ -169,7 +141,7 @@ const CommissionsCard = ({ userId }: CommissionsCardProps) => {
                     variant="outline"
                     onClick={() => {
                       setIsEditingBankAccount(false);
-                      setBankAccount(profile?.bank_account || "");
+                      setBankAccount(profile?.bank_account ?? "");
                     }}
                   >
                     Zrušiť

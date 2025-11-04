@@ -1,9 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Tables, TablesInsert } from "@/integrations/supabase/types";
+import { sql } from "@/integrations/neon/client";
 import { useToast } from "@/hooks/use-toast";
 
-type Appointment = Tables<"appointments">;
+export interface Appointment {
+  id: string;
+  angiologist_id: string;
+  patient_number: string;
+  appointment_date: string;
+  google_calendar_event_id: string | null;
+  status: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface AppointmentInsert {
+  angiologist_id: string;
+  patient_number: string;
+  appointment_date: string;
+  notes: string | null;
+  status?: string | null;
+}
 
 export const useAppointments = (userId: string) => {
   return useQuery({
@@ -11,13 +27,12 @@ export const useAppointments = (userId: string) => {
     queryFn: async () => {
       if (!userId) return [];
       
-      const { data, error } = await supabase
-        .from("appointments")
-        .select("*")
-        .eq("angiologist_id", userId)
-        .order("appointment_date", { ascending: false });
+      const data = await sql`
+        SELECT * FROM appointments
+        WHERE angiologist_id = ${userId}
+        ORDER BY appointment_date DESC
+      `;
 
-      if (error) throw error;
       return (data as Appointment[]) || [];
     },
     enabled: !!userId,
@@ -29,15 +44,14 @@ export const useCreateAppointment = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: TablesInsert<"appointments">) => {
-      const { data: result, error } = await supabase
-        .from("appointments")
-        .insert(data)
-        .select()
-        .single();
+    mutationFn: async (data: AppointmentInsert) => {
+      const [result] = await sql`
+        INSERT INTO appointments (angiologist_id, patient_number, appointment_date, notes, status)
+        VALUES (${data.angiologist_id}, ${data.patient_number}, ${data.appointment_date}, ${data.notes}, ${data.status || 'scheduled'})
+        RETURNING *
+      `;
 
-      if (error) throw error;
-      return result;
+      return result as Appointment;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["appointments", data.angiologist_id] });
