@@ -81,26 +81,33 @@ export const useUpdateProfile = () => {
                   invoice_name, invoice_address, invoice_ico, invoice_dic, created_at
       `;
 
-      const result: any[] = await sql.unsafe(query, [...values, userId]);
-      
-      if (!result || result.length === 0) {
-        throw new Error('Failed to update profile');
+      try {
+        const result: any[] = await sql.unsafe(query, [...values, userId]);
+        
+        if (!result || result.length === 0) {
+          throw new Error('Failed to update profile');
+        }
+        
+        return { profile: result[0] as Profile, userId };
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        throw error;
       }
-      
-      return result[0] as Profile;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["profile", data.id] });
+      // Invalidate using userId from the mutation context
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
       toast({
         title: "Profil aktualizovaný",
         description: "Údaje boli úspešne uložené",
       });
     },
     onError: (error: Error) => {
+      console.error('Profile update error:', error);
       toast({
         variant: "destructive",
         title: "Chyba",
-        description: error.message,
+        description: error.message || "Nepodarilo sa aktualizovať profil",
       });
     },
   });
