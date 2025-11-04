@@ -7,6 +7,7 @@ export interface Profile {
   email: string;
   full_name: string;
   bank_account: string | null;
+  ambulance_code: string | null;
   invoice_name: string | null;
   invoice_address: string | null;
   invoice_ico: string | null;
@@ -32,10 +33,10 @@ export const useProfile = (userId: string) => {
       
       try {
         const data = await sql`
-          SELECT id, email, full_name, bank_account, 
-                 invoice_name, invoice_address, invoice_ico, invoice_dic, created_at
-          FROM profiles
-          WHERE id = ${userId}
+        SELECT id, email, full_name, bank_account, ambulance_code,
+               invoice_name, invoice_address, invoice_ico, invoice_dic, created_at
+        FROM profiles
+        WHERE id = ${userId}
         `;
 
         if (data.length === 0) {
@@ -77,7 +78,7 @@ export const useUpdateProfile = () => {
             invoice_ico = ${updates.invoice_ico || null},
             invoice_dic = ${updates.invoice_dic || null}
           WHERE id = ${userId}
-          RETURNING id, email, full_name, bank_account, 
+          RETURNING id, email, full_name, bank_account, ambulance_code,
                     invoice_name, invoice_address, invoice_ico, invoice_dic, created_at
         `;
         

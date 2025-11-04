@@ -4,11 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { CalendarPlus, Loader2, Clock } from "lucide-react";
 import { z } from "zod";
 import { useCreateAppointment } from "@/hooks/use-appointments";
 import { useAvailableSlots, generateTimeSlotsForDate } from "@/hooks/use-available-slots";
+import { useProfile } from "@/hooks/use-profile";
 const appointmentSchema = z.object({
   ambulanceCode: z.string().min(1, "Kód ambulancie je povinný"),
   appointmentDate: z.string().min(1, "Dátum rezervácie je povinný").refine(
@@ -29,7 +31,7 @@ interface AppointmentFormProps {
 }
 
 const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
-  const [ambulanceCode, setAmbulanceCode] = useState("AA");
+  const { data: profile } = useProfile(userId);
   const [selectedDate, setSelectedDate] = useState(""); // For sending doctor - date only
   const [selectedSlot, setSelectedSlot] = useState(""); // For sending doctor - time slot
   const [appointmentDate, setAppointmentDate] = useState(""); // For receiving doctor - datetime-local
@@ -38,6 +40,9 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
   const { toast } = useToast();
   const { data: availableSlots = [] } = useAvailableSlots();
 
+  // Get ambulance code from user profile
+  const ambulanceCode = profile?.ambulance_code || "XX";
+
   // Generate time slots for selected date (for sending doctor)
   const timeSlots = useMemo(() => {
     if (!selectedDate || userType === 'receiving') return [];
@@ -45,6 +50,31 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
     if (isNaN(date.getTime())) return [];
     return generateTimeSlotsForDate(date, availableSlots);
   }, [selectedDate, availableSlots, userType]);
+
+  // Get unique available dates from slots (for sending doctor)
+  const availableDates = useMemo(() => {
+    if (userType === 'receiving' || availableSlots.length === 0) return [];
+    
+    const dates = new Set<string>();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Check next 90 days
+    for (let i = 0; i < 90; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(today.getDate() + i);
+      
+      const slots = generateTimeSlotsForDate(checkDate, availableSlots);
+      if (slots.length > 0) {
+        const year = checkDate.getFullYear();
+        const month = String(checkDate.getMonth() + 1).padStart(2, '0');
+        const day = String(checkDate.getDate()).padStart(2, '0');
+        dates.add(`${year}-${month}-${day}`);
+      }
+    }
+    
+    return Array.from(dates).sort();
+  }, [availableSlots, userType]);
 
   // Format current date/time for datetime-local input
   const getCurrentDateTime = () => {
@@ -142,21 +172,17 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="ambulanceCode">Kód ambulancie *</Label>
-            <Select value={ambulanceCode} onValueChange={setAmbulanceCode} required>
-              <SelectTrigger id="ambulanceCode">
-                <SelectValue placeholder="Vyberte kód ambulancie" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="AA">AA</SelectItem>
-                <SelectItem value="AB">AB</SelectItem>
-                <SelectItem value="AC">AC</SelectItem>
-                <SelectItem value="AD">AD</SelectItem>
-                <SelectItem value="AE">AE</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Kód ambulancie</Label>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-lg px-4 py-2 font-mono">
+                {ambulanceCode}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                (vygenerované z vášho mena)
+              </span>
+            </div>
             <p className="text-xs text-muted-foreground">
-              Číslo pacienta: {ambulanceCode && (userType === 'receiving' ? appointmentDate : selectedSlot) ? generatePatientNumber(ambulanceCode, userType === 'receiving' ? appointmentDate : selectedSlot) : "vyberte kód a dátum"}
+              Číslo pacienta: {ambulanceCode && (userType === 'receiving' ? appointmentDate : selectedSlot) ? generatePatientNumber(ambulanceCode, userType === 'receiving' ? appointmentDate : selectedSlot) : "vyberte dátum"}
             </p>
           </div>
 
@@ -199,7 +225,19 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
                   }}
                   required
                   min={new Date().toISOString().split('T')[0]} // Minimum today
+                  className={selectedDate && !timeSlots.length ? "border-red-500" : ""}
                 />
+                {availableDates.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    ✓ Dostupné dni: {availableDates.slice(0, 5).map(d => new Date(d).toLocaleDateString('sk-SK')).join(', ')}
+                    {availableDates.length > 5 && ` a ďalších ${availableDates.length - 5}...`}
+                  </p>
+                )}
+                {selectedDate && timeSlots.length === 0 && (
+                  <p className="text-xs text-red-500">
+                    ⚠️ V tento deň nie sú dostupné žiadne voľné termíny
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

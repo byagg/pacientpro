@@ -58,11 +58,23 @@ export const auth = {
     const hashedPassword = await hashPassword(password);
     const userId = crypto.randomUUID();
 
+    // Generate ambulance code from initials
+    const names = fullName.trim().split(/\s+/);
+    let ambulanceCode = '';
+    
+    if (names.length >= 2) {
+      // First letter of first name + first letter of last name
+      ambulanceCode = (names[0][0] + names[names.length - 1][0]).toUpperCase();
+    } else {
+      // If only one name, use first two letters
+      ambulanceCode = (names[0][0] + (names[0][1] || names[0][0])).toUpperCase();
+    }
+
     // Insert user into database
     const [user] = await sql`
-      INSERT INTO profiles (id, email, full_name, password_hash, user_type)
-      VALUES (${userId}, ${email}, ${fullName}, ${hashedPassword}, ${userType || null})
-      RETURNING id, email, full_name, created_at, user_type
+      INSERT INTO profiles (id, email, full_name, password_hash, user_type, ambulance_code)
+      VALUES (${userId}, ${email}, ${fullName}, ${hashedPassword}, ${userType || null}, ${ambulanceCode})
+      RETURNING id, email, full_name, created_at, user_type, ambulance_code
     `;
 
     // Create session
