@@ -206,14 +206,20 @@ const InvoiceDataSettings = ({ userId }: InvoiceDataSettingsProps) => {
                 id="bank_account"
                 value={formData.bank_account}
                 onChange={(e) => {
-                  setFormData({ ...formData, bank_account: e.target.value.toUpperCase() });
-                  if (errors.bank_account) {
-                    const newErrors = { ...errors };
-                    delete newErrors.bank_account;
-                    setErrors(newErrors);
+                  // Povoliť max 24 znakov bez medzier alebo 29 s medzerami
+                  const value = e.target.value.toUpperCase();
+                  const withoutSpaces = value.replace(/\s/g, '');
+                  if (withoutSpaces.length <= 24) {
+                    setFormData({ ...formData, bank_account: value });
+                    if (errors.bank_account) {
+                      const newErrors = { ...errors };
+                      delete newErrors.bank_account;
+                      setErrors(newErrors);
+                    }
                   }
                 }}
                 placeholder="SK31 1200 0000 1987 4263 7541"
+                maxLength={29}
                 className={errors.bank_account ? "border-red-500" : ""}
               />
               {errors.bank_account && (
