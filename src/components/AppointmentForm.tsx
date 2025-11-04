@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CalendarPlus, Loader2, Clock } from "lucide-react";
 import { z } from "zod";
 import { useCreateAppointment } from "@/hooks/use-appointments";
+import { useAvailableSlots, generateTimeSlotsForDate } from "@/hooks/use-available-slots";
 const appointmentSchema = z.object({
   ambulanceCode: z.string().min(1, "Kód ambulancie je povinný"),
   appointmentDate: z.string().min(1, "Dátum rezervácie je povinný").refine(
@@ -29,10 +30,21 @@ interface AppointmentFormProps {
 
 const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
   const [ambulanceCode, setAmbulanceCode] = useState("AA");
-  const [appointmentDate, setAppointmentDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(""); // For sending doctor - date only
+  const [selectedSlot, setSelectedSlot] = useState(""); // For sending doctor - time slot
+  const [appointmentDate, setAppointmentDate] = useState(""); // For receiving doctor - datetime-local
   const [procedureType, setProcedureType] = useState("");
   const createAppointment = useCreateAppointment();
   const { toast } = useToast();
+  const { data: availableSlots = [] } = useAvailableSlots();
+
+  // Generate time slots for selected date (for sending doctor)
+  const timeSlots = useMemo(() => {
+    if (!selectedDate || userType === 'receiving') return [];
+    const date = new Date(selectedDate);
+    if (isNaN(date.getTime())) return [];
+    return generateTimeSlotsForDate(date, availableSlots);
+  }, [selectedDate, availableSlots, userType]);
 
   // Format current date/time for datetime-local input
   const getCurrentDateTime = () => {
@@ -63,18 +75,32 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
     e.preventDefault();
 
     try {
+      // For sending doctor, use selected slot; for receiving doctor, use appointmentDate
+      const finalAppointmentDate = userType === 'receiving' ? appointmentDate : selectedSlot;
+
+      if (!finalAppointmentDate) {
+        toast({
+          variant: "destructive",
+          title: "Chyba validácie",
+          description: userType === 'receiving' 
+            ? "Dátum a čas vyšetrenia je povinný" 
+            : "Vyberte dostupný slot",
+        });
+        return;
+      }
+
       appointmentSchema.parse({
         ambulanceCode,
-        appointmentDate,
+        appointmentDate: finalAppointmentDate,
         procedureType,
       });
 
-      const appointmentDateObj = new Date(appointmentDate);
+      const appointmentDateObj = new Date(finalAppointmentDate);
       if (isNaN(appointmentDateObj.getTime())) {
         throw new Error("Neplatný dátum rezervácie");
       }
 
-      const patientNumber = generatePatientNumber(ambulanceCode, appointmentDate);
+      const patientNumber = generatePatientNumber(ambulanceCode, finalAppointmentDate);
 
       await createAppointment.mutateAsync({
         angiologist_id: userId,
@@ -85,7 +111,9 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
       });
 
       // Reset form
-      setAmbulanceCode("");
+      setAmbulanceCode("AA");
+      setSelectedDate("");
+      setSelectedSlot("");
       setAppointmentDate("");
       setProcedureType("");
     } catch (error) {
@@ -128,14 +156,15 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Číslo pacienta: {ambulanceCode && appointmentDate ? generatePatientNumber(ambulanceCode, appointmentDate) : "vyberte kód a dátum"}
+              Číslo pacienta: {ambulanceCode && (userType === 'receiving' ? appointmentDate : selectedSlot) ? generatePatientNumber(ambulanceCode, userType === 'receiving' ? appointmentDate : selectedSlot) : "vyberte kód a dátum"}
             </p>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="appointmentDate">Dátum a čas vyšetrenia *</Label>
-              {userType === 'receiving' && (
+          {userType === 'receiving' ? (
+            // Receiving doctor: datetime-local input with "Now" button
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="appointmentDate">Dátum a čas vyšetrenia *</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -146,16 +175,66 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
                   <Clock className="h-3 w-3" />
                   Teraz
                 </Button>
-              )}
+              </div>
+              <Input
+                id="appointmentDate"
+                type="datetime-local"
+                value={appointmentDate}
+                onChange={(e) => setAppointmentDate(e.target.value)}
+                required
+              />
             </div>
-            <Input
-              id="appointmentDate"
-              type="datetime-local"
-              value={appointmentDate}
-              onChange={(e) => setAppointmentDate(e.target.value)}
-              required
-            />
-          </div>
+          ) : (
+            // Sending doctor: date picker + slot selector
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="selectedDate">Dátum vyšetrenia *</Label>
+                <Input
+                  id="selectedDate"
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    setSelectedSlot(""); // Reset slot when date changes
+                  }}
+                  required
+                  min={new Date().toISOString().split('T')[0]} // Minimum today
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="timeSlot">Dostupný slot *</Label>
+                <Select 
+                  value={selectedSlot} 
+                  onValueChange={setSelectedSlot} 
+                  required
+                  disabled={!selectedDate || timeSlots.length === 0}
+                >
+                  <SelectTrigger id="timeSlot">
+                    <SelectValue placeholder={
+                      !selectedDate 
+                        ? "Najprv vyberte dátum" 
+                        : timeSlots.length === 0 
+                          ? "Žiadne dostupné sloty" 
+                          : "Vyberte dostupný slot"
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeSlots.map((slot, index) => (
+                      <SelectItem key={index} value={slot.time}>
+                        {slot.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedDate && timeSlots.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Pre tento dátum nie sú dostupné žiadne ordinančné hodiny
+                  </p>
+                )}
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="procedureType">Typ procedúry *</Label>

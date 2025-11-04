@@ -25,7 +25,7 @@ export const useReceivedPatients = (receivingDoctorId: string) => {
           FROM public.appointments a
           JOIN public.profiles p ON a.angiologist_id = p.id
           WHERE a.status = 'scheduled'
-            AND (a.examined_at IS NULL OR a.examined_at = '')
+            AND a.examined_at IS NULL
           ORDER BY a.appointment_date ASC
         `;
         
