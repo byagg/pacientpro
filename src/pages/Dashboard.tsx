@@ -10,6 +10,10 @@ import AppointmentsList from "@/components/AppointmentsList";
 import CommissionsCard from "@/components/CommissionsCard";
 import OfficeHoursSettings from "@/components/OfficeHoursSettings";
 import ReceivedPatientsList from "@/components/ReceivedPatientsList";
+import InvoiceDataSettings from "@/components/InvoiceDataSettings";
+import InvoiceCalculator from "@/components/InvoiceCalculator";
+import SentInvoicesList from "@/components/SentInvoicesList";
+import ReceivedInvoicesList from "@/components/ReceivedInvoicesList";
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -90,18 +94,28 @@ const Dashboard = () => {
               // Receiving doctor view
               <>
                 <OfficeHoursSettings receivingDoctorId={user.id} />
-                <div className="mt-6">
+                <div className="mt-6 space-y-6">
                   <ReceivedPatientsList receivingDoctorId={user.id} />
+                  <ReceivedInvoicesList receivingDoctorId={user.id} />
                 </div>
               </>
             ) : (
               // Sending doctor view (default)
               <>
-                <div className="grid gap-6 md:grid-cols-2 mb-8">
+                <div className="grid gap-6 md:grid-cols-2 mb-6">
                   <AppointmentForm userId={user.id} userType={user.user_type} />
                   <CommissionsCard userId={user.id} />
                 </div>
-                <AppointmentsList userId={user.id} />
+                
+                <div className="grid gap-6 md:grid-cols-2 mb-6">
+                  <InvoiceDataSettings userId={user.id} />
+                  <InvoiceCalculator userId={user.id} />
+                </div>
+                
+                <div className="grid gap-6 md:grid-cols-2">
+                  <AppointmentsList userId={user.id} />
+                  <SentInvoicesList userId={user.id} />
+                </div>
               </>
             )}
           </>

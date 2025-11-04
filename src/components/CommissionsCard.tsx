@@ -1,12 +1,6 @@
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { DollarSign, TrendingUp, CreditCard, Loader2 } from "lucide-react";
+import { DollarSign, TrendingUp } from "lucide-react";
 import { useCommissions } from "@/hooks/use-commissions";
-import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 
 interface CommissionsCardProps {
   userId: string;
@@ -14,10 +8,6 @@ interface CommissionsCardProps {
 
 const CommissionsCard = ({ userId }: CommissionsCardProps) => {
   const { data: commissions = [], isLoading } = useCommissions(userId);
-  const { data: profile, isLoading: isLoadingProfile } = useProfile(userId);
-  const updateProfile = useUpdateProfile();
-  const [bankAccount, setBankAccount] = useState("");
-  const [isEditingBankAccount, setIsEditingBankAccount] = useState(false);
 
   const totalCommissions = commissions.reduce((sum, c) => sum + Number(c.amount), 0);
   const pendingCommissions = commissions
@@ -27,22 +17,6 @@ const CommissionsCard = ({ userId }: CommissionsCardProps) => {
     .filter((c) => c.status === "paid")
     .reduce((sum, c) => sum + Number(c.amount), 0);
 
-  // Initialize bank account from profile
-  useEffect(() => {
-    if (profile) {
-      setBankAccount(profile.bank_account || "");
-    }
-  }, [profile]);
-
-  const handleSaveBankAccount = async () => {
-    if (!userId) return;
-    
-    await updateProfile.mutateAsync({
-      userId,
-      updates: { bank_account: bankAccount.trim() || null },
-    });
-    setIsEditingBankAccount(false);
-  };
 
   if (isLoading) {
     return (
@@ -99,75 +73,6 @@ const CommissionsCard = ({ userId }: CommissionsCardProps) => {
               Zatiaľ nemáte žiadne manipulačné poplatky
             </p>
           )}
-
-          <Separator className="my-4" />
-
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-              <Label className="text-sm font-semibold">Nastaviť platobnú bránu</Label>
-            </div>
-            
-            {isEditingBankAccount ? (
-              <div className="space-y-2">
-                <Label htmlFor="bankAccount" className="text-xs text-muted-foreground">
-                  Bankový účet (IBAN)
-                </Label>
-                <Input
-                  id="bankAccount"
-                  type="text"
-                  placeholder="SK12 3456 7890 1234 5678 9012"
-                  value={bankAccount}
-                  onChange={(e) => setBankAccount(e.target.value)}
-                  maxLength={34}
-                />
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleSaveBankAccount}
-                    disabled={updateProfile.isPending}
-                  >
-                    {updateProfile.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                        Ukladám...
-                      </>
-                    ) : (
-                      "Uložiť"
-                    )}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setIsEditingBankAccount(false);
-                      setBankAccount(profile?.bank_account ?? "");
-                    }}
-                  >
-                    Zrušiť
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Bankový účet</p>
-                    <p className="text-sm font-mono">
-                      {bankAccount || "Nie je nastavený"}
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsEditingBankAccount(true)}
-                  >
-                    {bankAccount ? "Zmeniť" : "Pridať"}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </CardContent>
     </Card>

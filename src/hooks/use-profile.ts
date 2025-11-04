@@ -81,8 +81,13 @@ export const useUpdateProfile = () => {
                   invoice_name, invoice_address, invoice_ico, invoice_dic, created_at
       `;
 
-      const [result] = await sql.unsafe(query, [...values, userId]);
-      return result as Profile;
+      const result: any[] = await sql.unsafe(query, [...values, userId]);
+      
+      if (!result || result.length === 0) {
+        throw new Error('Failed to update profile');
+      }
+      
+      return result[0] as Profile;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["profile", data.id] });
