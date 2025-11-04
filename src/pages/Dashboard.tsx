@@ -17,6 +17,7 @@ import SentInvoicesList from "@/components/SentInvoicesList";
 import PaidInvoicesList from "@/components/PaidInvoicesList";
 import ReceivingInvoiceCreator from "@/components/ReceivingInvoiceCreator";
 import IssuedInvoicesList from "@/components/IssuedInvoicesList";
+import SendingDoctorInvoiceData from "@/components/SendingDoctorInvoiceData";
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -140,7 +141,15 @@ const Dashboard = () => {
                 </TabsContent>
 
                 <TabsContent value="section3" className="space-y-6">
-                  <InvoiceDataSettings userId={user.id} />
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <InvoiceDataSettings 
+                      userId={user.id}
+                      title="Vaše fakturačné údaje"
+                      description="Údaje prijímajúceho lekára (odberateľ)"
+                      borderColor="border-l-green-500"
+                    />
+                    <SendingDoctorInvoiceData receivingDoctorId={user.id} />
+                  </div>
                   <ReceivingInvoiceCreator receivingDoctorId={user.id} />
                   <IssuedInvoicesList receivingDoctorId={user.id} />
                 </TabsContent>

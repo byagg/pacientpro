@@ -11,6 +11,9 @@ import { z } from "zod";
 
 interface InvoiceDataSettingsProps {
   userId: string;
+  title?: string;
+  description?: string;
+  borderColor?: string;
 }
 
 // Validačná schéma
@@ -30,7 +33,12 @@ const invoiceDataSchema = z.object({
     .or(z.literal("")),
 });
 
-const InvoiceDataSettings = ({ userId }: InvoiceDataSettingsProps) => {
+const InvoiceDataSettings = ({ 
+  userId,
+  title = "Fakturačné údaje",
+  description = "Údaje pre vystavovanie faktúr",
+  borderColor = "border-l-primary"
+}: InvoiceDataSettingsProps) => {
   const { data: profile, isLoading } = useProfile(userId);
   const updateProfile = useUpdateProfile();
   const { toast } = useToast();
@@ -137,14 +145,14 @@ const InvoiceDataSettings = ({ userId }: InvoiceDataSettingsProps) => {
   }
 
   return (
-    <Card className="shadow-card">
+    <Card className={`shadow-card border-l-4 ${borderColor}`}>
       <CardHeader>
         <div className="flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" />
-          <CardTitle>Fakturačné údaje</CardTitle>
+          <CardTitle>{title}</CardTitle>
         </div>
         <CardDescription>
-          Údaje pre vystavovanie faktúr
+          {description}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
