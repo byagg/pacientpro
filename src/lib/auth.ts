@@ -60,14 +60,33 @@ export const auth = {
 
     // Generate ambulance code from initials
     const names = fullName.trim().split(/\s+/);
-    let ambulanceCode = '';
+    let baseCode = '';
     
     if (names.length >= 2) {
       // First letter of first name + first letter of last name
-      ambulanceCode = (names[0][0] + names[names.length - 1][0]).toUpperCase();
+      baseCode = (names[0][0] + names[names.length - 1][0]).toUpperCase();
     } else {
       // If only one name, use first two letters
-      ambulanceCode = (names[0][0] + (names[0][1] || names[0][0])).toUpperCase();
+      baseCode = (names[0][0] + (names[0][1] || names[0][0])).toUpperCase();
+    }
+
+    // Check for duplicates and add number suffix if needed
+    let ambulanceCode = baseCode;
+    let suffix = 1;
+    
+    while (true) {
+      const existing = await sql`
+        SELECT id FROM profiles WHERE ambulance_code = ${ambulanceCode}
+      `;
+      
+      if (existing.length === 0) {
+        // Code is unique, use it
+        break;
+      }
+      
+      // Code exists, try with suffix
+      suffix++;
+      ambulanceCode = `${baseCode}${suffix}`;
     }
 
     // Insert user into database

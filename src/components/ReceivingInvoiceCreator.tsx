@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calculator, FileText, Loader2, Euro, Search, Filter } from "lucide-react";
+import { Calculator, FileText, Loader2, Euro, Search, Filter, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { sql } from "@/integrations/neon/client";
 import { useCreateInvoice } from "@/hooks/use-invoices";
@@ -35,7 +35,7 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
   const createInvoice = useCreateInvoice();
 
   // Fetch examined patients from last year that haven't been invoiced yet
-  const { data: patients = [], isLoading } = useQuery({
+  const { data: patients = [], isLoading, error } = useQuery({
     queryKey: ["examined-patients-for-invoice", receivingDoctorId],
     queryFn: async () => {
       const oneYearAgo = new Date();
@@ -66,6 +66,8 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
       return result;
     },
     enabled: !!receivingDoctorId,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   // Filter patients
@@ -84,17 +86,19 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
     });
   }, [patients, searchTerm, selectedDoctorFilter]);
 
-  // Group filtered patients by sending doctor
-  const patientsBySendingDoctor = filteredPatients.reduce((acc, patient) => {
-    if (!acc[patient.angiologist_id]) {
-      acc[patient.angiologist_id] = {
-        doctorName: patient.sending_doctor_name,
-        patients: [],
-      };
-    }
-    acc[patient.angiologist_id].patients.push(patient);
-    return acc;
-  }, {} as Record<string, { doctorName: string; patients: ExaminedPatient[] }>);
+  // Group filtered patients by sending doctor (memoized for performance)
+  const patientsBySendingDoctor = useMemo(() => {
+    return filteredPatients.reduce((acc, patient) => {
+      if (!acc[patient.angiologist_id]) {
+        acc[patient.angiologist_id] = {
+          doctorName: patient.sending_doctor_name,
+          patients: [],
+        };
+      }
+      acc[patient.angiologist_id].patients.push(patient);
+      return acc;
+    }, {} as Record<string, { doctorName: string; patients: ExaminedPatient[] }>);
+  }, [filteredPatients]);
 
   // Get unique doctors for filter dropdown
   const uniqueDoctors = useMemo(() => {
@@ -151,6 +155,28 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
       <Card className="shadow-card">
         <CardContent className="py-8 text-center">
           <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="shadow-card border-l-4 border-l-red-500">
+        <CardContent className="py-8">
+          <div className="text-center space-y-3">
+            <div className="flex justify-center">
+              <div className="rounded-full bg-red-100 p-3">
+                <AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+            <div>
+              <h3 className="font-semibold text-red-900">Chyba pri načítaní údajov</h3>
+              <p className="text-sm text-red-700 mt-1">
+                {error instanceof Error ? error.message : 'Nepodarilo sa načítať zoznam pacientov'}
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
