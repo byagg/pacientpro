@@ -100,10 +100,10 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
               const isPaid = commission?.status === 'paid';
 
               return (
-                <div
-                  key={appointment.id}
+              <div
+                key={appointment.id}
                   className="border rounded-lg p-4 hover:bg-muted/50 transition-colors relative"
-                >
+              >
                   {/* Delete button */}
                   <Button
                     variant="ghost"
@@ -117,12 +117,12 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
 
                   <div className="flex justify-between items-start mb-2 pr-10">
                     <div className="flex-1">
-                      <p className="font-semibold text-lg">
-                        Pacient: {appointment.patient_number}
-                      </p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                        <Clock className="h-4 w-4" />
-                        <span>
+                    <p className="font-semibold text-lg">
+                      Pacient: {appointment.patient_number}
+                    </p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                      <Clock className="h-4 w-4" />
+                      <span>
                           Naplánované: {format(new Date(appointment.appointment_date), "PPp", {
                             locale: sk,
                           })}
@@ -133,10 +133,10 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
                           <CheckCircle2 className="h-4 w-4" />
                           <span>
                             Vyšetrené: {format(new Date(appointment.examined_at), "PPp", {
-                              locale: sk,
-                            })}
-                          </span>
-                        </div>
+                          locale: sk,
+                        })}
+                      </span>
+                    </div>
                       )}
                       {isPaid && commission?.paid_at && (
                         <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 mt-1">
@@ -148,16 +148,16 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
                           </span>
                         </div>
                       )}
-                    </div>
-                    <Badge className={getStatusColor(appointment.status)}>
-                      {getStatusText(appointment.status)}
-                    </Badge>
                   </div>
-                  {appointment.notes && (
-                    <p className="text-sm text-muted-foreground mt-2">
+                  <Badge className={getStatusColor(appointment.status)}>
+                    {getStatusText(appointment.status)}
+                  </Badge>
+                </div>
+                {appointment.notes && (
+                  <p className="text-sm text-muted-foreground mt-2">
                       Typ procedúry: {appointment.notes}
-                    </p>
-                  )}
+                  </p>
+                )}
 
                   {/* Commission status display (read-only for sending doctor) */}
                   {commission && (
@@ -181,7 +181,7 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
                       </div>
                     </div>
                   )}
-                </div>
+              </div>
               );
             })}
           </div>

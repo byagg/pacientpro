@@ -162,9 +162,9 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
 
           {userType === 'receiving' ? (
             // Receiving doctor: datetime-local input with "Now" button
-            <div className="space-y-2">
+          <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="appointmentDate">Dátum a čas vyšetrenia *</Label>
+            <Label htmlFor="appointmentDate">Dátum a čas vyšetrenia *</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -176,14 +176,14 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
                   Teraz
                 </Button>
               </div>
-              <Input
-                id="appointmentDate"
-                type="datetime-local"
-                value={appointmentDate}
-                onChange={(e) => setAppointmentDate(e.target.value)}
-                required
-              />
-            </div>
+            <Input
+              id="appointmentDate"
+              type="datetime-local"
+              value={appointmentDate}
+              onChange={(e) => setAppointmentDate(e.target.value)}
+              required
+            />
+          </div>
           ) : (
             // Sending doctor: date picker + slot selector
             <>

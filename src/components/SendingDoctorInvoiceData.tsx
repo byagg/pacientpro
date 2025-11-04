@@ -133,65 +133,65 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
           </div>
         ) : (
           <div className="grid gap-4">
-          <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-            <User className="h-4 w-4 text-muted-foreground mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-muted-foreground">Meno / Názov</p>
-              <p className="text-base font-semibold">
-                {profile.invoice_name || profile.full_name || "—"}
-              </p>
-            </div>
-          </div>
-
-          {profile.invoice_address && (
             <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <User className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Adresa</p>
-                <p className="text-base">{profile.invoice_address}</p>
+                <p className="text-sm font-medium text-muted-foreground">Meno / Názov</p>
+                <p className="text-base font-semibold">
+                  {profile.invoice_name || profile.full_name || "—"}
+                </p>
               </div>
             </div>
-          )}
 
-          {profile.bank_account && (
-            <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-              <CreditCard className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">IBAN</p>
-                <p className="text-base font-mono">{profile.bank_account}</p>
-              </div>
-            </div>
-          )}
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {profile.invoice_ico && (
+            {profile.invoice_address && (
               <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-muted-foreground">IČO</p>
-                  <p className="text-base font-mono">{profile.invoice_ico}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Adresa</p>
+                  <p className="text-base">{profile.invoice_address}</p>
                 </div>
               </div>
             )}
 
-            {profile.invoice_dic && (
+            {profile.bank_account && (
               <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
+                <CreditCard className="h-4 w-4 text-muted-foreground mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-muted-foreground">DIČ</p>
-                  <p className="text-base font-mono">{profile.invoice_dic}</p>
+                  <p className="text-sm font-medium text-muted-foreground">IBAN</p>
+                  <p className="text-base font-mono">{profile.bank_account}</p>
                 </div>
               </div>
             )}
-          </div>
 
-          {!hasCompleteData && (
-            <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800">
-                ⚠️ Odosielajúci lekár ešte nevyplnil všetky fakturačné údaje.
-              </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              {profile.invoice_ico && (
+                <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                  <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-muted-foreground">IČO</p>
+                    <p className="text-base font-mono">{profile.invoice_ico}</p>
+                  </div>
+                </div>
+              )}
+
+              {profile.invoice_dic && (
+                <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                  <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-muted-foreground">DIČ</p>
+                    <p className="text-base font-mono">{profile.invoice_dic}</p>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+
+            {!hasCompleteData && (
+              <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  ⚠️ Odosielajúci lekár ešte nevyplnil všetky fakturačné údaje.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
