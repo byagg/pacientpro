@@ -59,6 +59,21 @@ BEGIN
     END IF;
 END $$;
 
+-- Add ambulance_code if table exists but column doesn't
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'profiles' 
+        AND column_name = 'ambulance_code'
+    ) THEN
+        ALTER TABLE public.profiles
+        ADD COLUMN ambulance_code TEXT;
+    END IF;
+END $$;
+
 -- ============================================
 -- Step 2: Create appointments table
 -- ============================================
