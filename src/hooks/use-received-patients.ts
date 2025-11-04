@@ -15,17 +15,19 @@ export const useReceivedPatients = (receivingDoctorId: string) => {
     queryKey: ["received-patients", receivingDoctorId],
     queryFn: async () => {
       try {
-        const appointments = await sql<ReceivedAppointment[]>`
-          SELECT 
-            a.*,
-            p.full_name as sending_doctor_name,
-            p.email as sending_doctor_email
-          FROM public.appointments a
-          JOIN public.profiles p ON a.angiologist_id = p.id
-          WHERE a.status = 'scheduled'
-            AND (a.receiving_doctor_id IS NULL OR a.receiving_doctor_id = ${receivingDoctorId})
-          ORDER BY a.appointment_date ASC
-        `;
+      // Get all scheduled appointments (not yet examined)
+      // These are all patients sent by sending doctors that haven't been examined yet
+      const appointments = await sql<ReceivedAppointment[]>`
+        SELECT 
+          a.*,
+          p.full_name as sending_doctor_name,
+          p.email as sending_doctor_email
+        FROM public.appointments a
+        JOIN public.profiles p ON a.angiologist_id = p.id
+        WHERE a.status = 'scheduled'
+          AND a.examined_at IS NULL
+        ORDER BY a.appointment_date ASC
+      `;
         return appointments;
       } catch (error: any) {
         // If columns don't exist yet, return empty array

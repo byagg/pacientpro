@@ -72,11 +72,10 @@ const Dashboard = () => {
             {user.user_type === 'receiving' ? (
               // Receiving doctor view
               <>
-                <div className="grid gap-6 md:grid-cols-2 mb-8">
-                  <OfficeHoursSettings receivingDoctorId={user.id} />
-                  <CommissionsCard userId={user.id} />
+                <OfficeHoursSettings receivingDoctorId={user.id} />
+                <div className="mt-6">
+                  <ReceivedPatientsList receivingDoctorId={user.id} />
                 </div>
-                <ReceivedPatientsList receivingDoctorId={user.id} />
               </>
             ) : (
               // Sending doctor view (default)
