@@ -83,13 +83,14 @@ export const useUpdateProfile = () => {
 
       try {
         console.log('Executing update query:', query, 'with values:', [...values, userId]);
-        const result = await sql.unsafe(query, [...values, userId]);
-        console.log('Raw SQL result:', result);
         
-        // sql.unsafe returns rows directly, not wrapped in an array
-        const rows = Array.isArray(result) ? result : [result];
+        // Execute the query - sql.unsafe returns a promise that resolves to an array
+        const rows = await sql.unsafe(query, [...values, userId]);
+        console.log('Raw SQL result:', rows);
+        console.log('Is array:', Array.isArray(rows));
+        console.log('Length:', rows?.length);
         
-        if (!rows || rows.length === 0) {
+        if (!rows || !Array.isArray(rows) || rows.length === 0) {
           throw new Error('Failed to update profile - no rows returned');
         }
         
