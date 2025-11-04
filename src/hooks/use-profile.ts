@@ -64,38 +64,31 @@ export const useUpdateProfile = () => {
         throw new Error('No updates provided');
       }
 
-      // Build dynamic update query
-      const setClauses: string[] = [];
-      const values: any[] = [];
-
-      Object.entries(updates).forEach(([key, value]) => {
-        setClauses.push(`${key} = $${values.length + 1}`);
-        values.push(value);
-      });
-
-      const query = `
-        UPDATE profiles
-        SET ${setClauses.join(', ')}
-        WHERE id = $${values.length + 1}
-        RETURNING id, email, full_name, bank_account, 
-                  invoice_name, invoice_address, invoice_ico, invoice_dic, created_at
-      `;
+      console.log('Starting profile update:', { userId, updates });
 
       try {
-        console.log('Executing update query:', query, 'with values:', [...values, userId]);
+        // Use template literal syntax - much simpler and works correctly with Neon
+        const result = await sql`
+          UPDATE public.profiles
+          SET 
+            invoice_name = ${updates.invoice_name || null},
+            invoice_address = ${updates.invoice_address || null},
+            bank_account = ${updates.bank_account || null},
+            invoice_ico = ${updates.invoice_ico || null},
+            invoice_dic = ${updates.invoice_dic || null}
+          WHERE id = ${userId}
+          RETURNING id, email, full_name, bank_account, 
+                    invoice_name, invoice_address, invoice_ico, invoice_dic, created_at
+        `;
         
-        // Execute the query - sql.unsafe returns a promise that resolves to an array
-        const rows = await sql.unsafe(query, [...values, userId]);
-        console.log('Raw SQL result:', rows);
-        console.log('Is array:', Array.isArray(rows));
-        console.log('Length:', rows?.length);
+        console.log('Update result:', result);
         
-        if (!rows || !Array.isArray(rows) || rows.length === 0) {
+        if (!result || result.length === 0) {
           throw new Error('Failed to update profile - no rows returned');
         }
         
-        const profile = rows[0] as Profile;
-        console.log('Returning profile:', profile);
+        const profile = result[0] as Profile;
+        console.log('Successfully updated profile:', profile);
         
         return profile;
       } catch (error) {
