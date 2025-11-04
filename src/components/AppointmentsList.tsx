@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useAppointments } from "@/hooks/use-appointments";
@@ -79,11 +79,21 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                       <Clock className="h-4 w-4" />
                       <span>
-                        {format(new Date(appointment.appointment_date), "PPp", {
+                        Naplánované: {format(new Date(appointment.appointment_date), "PPp", {
                           locale: sk,
                         })}
                       </span>
                     </div>
+                    {appointment.examined_at && (
+                      <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 mt-1">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>
+                          Vyšetrené: {format(new Date(appointment.examined_at), "PPp", {
+                            locale: sk,
+                          })}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <Badge className={getStatusColor(appointment.status)}>
                     {getStatusText(appointment.status)}
@@ -91,7 +101,7 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
                 </div>
                 {appointment.notes && (
                   <p className="text-sm text-muted-foreground mt-2">
-                    {appointment.notes}
+                    Typ procedúry: {appointment.notes}
                   </p>
                 )}
               </div>

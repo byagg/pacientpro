@@ -24,9 +24,10 @@ const appointmentSchema = z.object({
 
 interface AppointmentFormProps {
   userId: string;
+  userType?: 'sending' | 'receiving';
 }
 
-const AppointmentForm = ({ userId }: AppointmentFormProps) => {
+const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
   const [ambulanceCode, setAmbulanceCode] = useState("AA");
   const [appointmentDate, setAppointmentDate] = useState("");
   const [procedureType, setProcedureType] = useState("");
@@ -134,16 +135,18 @@ const AppointmentForm = ({ userId }: AppointmentFormProps) => {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="appointmentDate">Dátum a čas vyšetrenia *</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleSetNow}
-                className="gap-1"
-              >
-                <Clock className="h-3 w-3" />
-                Teraz
-              </Button>
+              {userType === 'receiving' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSetNow}
+                  className="gap-1"
+                >
+                  <Clock className="h-3 w-3" />
+                  Teraz
+                </Button>
+              )}
             </div>
             <Input
               id="appointmentDate"

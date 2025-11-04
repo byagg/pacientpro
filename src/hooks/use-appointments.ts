@@ -10,6 +10,9 @@ export interface Appointment {
   google_calendar_event_id: string | null;
   status: string | null;
   notes: string | null;
+  receiving_doctor_id: string | null;
+  examined_at: string | null;
+  examined_by: string | null;
   created_at: string;
 }
 

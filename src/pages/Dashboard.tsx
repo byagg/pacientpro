@@ -7,6 +7,8 @@ import { LogOut, Calendar } from "lucide-react";
 import AppointmentForm from "@/components/AppointmentForm";
 import AppointmentsList from "@/components/AppointmentsList";
 import CommissionsCard from "@/components/CommissionsCard";
+import OfficeHoursSettings from "@/components/OfficeHoursSettings";
+import ReceivedPatientsList from "@/components/ReceivedPatientsList";
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -67,12 +69,25 @@ const Dashboard = () => {
 
         {user?.id && (
           <>
-            <div className="grid gap-6 md:grid-cols-2 mb-8">
-              <AppointmentForm userId={user.id} />
-              <CommissionsCard userId={user.id} />
-            </div>
-
-            <AppointmentsList userId={user.id} />
+            {user.user_type === 'receiving' ? (
+              // Receiving doctor view
+              <>
+                <div className="grid gap-6 md:grid-cols-2 mb-8">
+                  <OfficeHoursSettings receivingDoctorId={user.id} />
+                  <CommissionsCard userId={user.id} />
+                </div>
+                <ReceivedPatientsList receivingDoctorId={user.id} />
+              </>
+            ) : (
+              // Sending doctor view (default)
+              <>
+                <div className="grid gap-6 md:grid-cols-2 mb-8">
+                  <AppointmentForm userId={user.id} userType={user.user_type} />
+                  <CommissionsCard userId={user.id} />
+                </div>
+                <AppointmentsList userId={user.id} />
+              </>
+            )}
           </>
         )}
       </main>

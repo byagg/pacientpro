@@ -16,12 +16,29 @@ export interface Session {
 
 // Hash password using Web Crypto API
 async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  // Check if crypto.subtle is available (requires secure context: HTTPS or localhost)
+  if (!crypto.subtle) {
+    const currentUrl = window.location.href;
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const errorMsg = isLocalhost
+      ? 'Web Crypto API nie je dostupná. Skontrolujte nastavenia prehliadača.'
+      : `Web Crypto API vyžaduje bezpečný kontext (HTTPS alebo localhost).\n` +
+        `Aktuálne pristupujete cez: ${currentUrl}\n` +
+        `Prosím, použite: http://localhost:8080${window.location.pathname}`;
+    throw new Error(errorMsg);
+  }
+
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  } catch (error) {
+    console.error('Error hashing password:', error);
+    throw new Error('Chyba pri hashovaní hesla. Skontrolujte, či používate HTTPS alebo localhost.');
+  }
 }
 
 // Simple session management with localStorage
