@@ -155,13 +155,13 @@ const Dashboard = () => {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="section2" className="space-y-6">
-                  <InvoiceCalculator userId={user.id} />
-                  <div className="grid gap-6 md:grid-cols-2">
-                    <SentInvoicesList userId={user.id} />
-                    <PaidInvoicesList />
-                  </div>
-                </TabsContent>
+          <TabsContent value="section2" className="space-y-6">
+            <InvoiceCalculator userId={user.id} />
+            <div className="grid gap-6 md:grid-cols-2">
+              <SentInvoicesList userId={user.id} />
+              <PaidInvoicesList userId={user.id} />
+            </div>
+          </TabsContent>
 
                 <TabsContent value="section3" className="space-y-6">
                   <InvoiceDataSettings userId={user.id} />

@@ -1,13 +1,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileCheck, Calendar, User, Euro } from "lucide-react";
 import { useSendingInvoices } from "@/hooks/use-invoices";
-import { useAuth } from "@/lib/auth";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 
-const PaidInvoicesList = () => {
-  const { user } = useAuth();
-  const { data: invoices = [], isLoading } = useSendingInvoices(user?.id || "");
+interface PaidInvoicesListProps {
+  userId: string;
+}
+
+const PaidInvoicesList = ({ userId }: PaidInvoicesListProps) => {
+  const { data: invoices = [], isLoading } = useSendingInvoices(userId);
 
   // Filter only paid invoices
   const paidInvoices = invoices.filter(invoice => invoice.status === 'paid');
