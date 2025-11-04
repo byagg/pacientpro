@@ -115,6 +115,13 @@ export const useCreateInvoice = () => {
       const invoiceNumber = `INV-${year}${month}${day}-${random}`;
 
       // Create invoice
+      console.log('Creating invoice with data:', {
+        sending_doctor_id: data.sending_doctor_id,
+        receiving_doctor_id: data.receiving_doctor_id,
+        patient_count: data.appointment_ids.length,
+        total_amount: data.total_amount
+      });
+      
       const [invoice] = await sql<Invoice[]>`
         INSERT INTO public.invoices (
           invoice_number, 
@@ -136,6 +143,8 @@ export const useCreateInvoice = () => {
         )
         RETURNING *
       `;
+      
+      console.log('Invoice created:', invoice);
 
       // Create invoice items
       for (const appointmentId of data.appointment_ids) {

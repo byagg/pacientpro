@@ -21,15 +21,19 @@ interface InvoiceData {
   total_amount: string;
   patient_count: number;
   notes: string | null;
+  sending_doctor_id: string | null;
+  receiving_doctor_id: string | null;
   
   // Sending doctor (odosielajúci lekár - ODBERATEĽ, platí za službu)
-  sending_doctor_name: string;
+  sending_doctor_name: string | null;
   sending_doctor_address: string | null;
   sending_doctor_ico: string | null;
   sending_doctor_dic: string | null;
+  sending_doctor_bank_account: string | null;
+  sending_doctor_signature: string | null;
   
   // Receiving doctor (prijímajúci lekár - DODÁVATEĽ, poskytol službu vyšetrenia)
-  receiving_doctor_name: string;
+  receiving_doctor_name: string | null;
   receiving_doctor_address: string | null;
   receiving_doctor_ico: string | null;
   receiving_doctor_dic: string | null;
@@ -56,11 +60,15 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
           i.total_amount,
           i.patient_count,
           i.notes,
+          i.sending_doctor_id,
+          i.receiving_doctor_id,
           
           COALESCE(s.invoice_name, s.full_name) as sending_doctor_name,
           s.invoice_address as sending_doctor_address,
           s.invoice_ico as sending_doctor_ico,
           s.invoice_dic as sending_doctor_dic,
+          s.bank_account as sending_doctor_bank_account,
+          s.signature_image as sending_doctor_signature,
           
           COALESCE(r.invoice_name, r.full_name) as receiving_doctor_name,
           r.invoice_address as receiving_doctor_address,
@@ -70,12 +78,21 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
           r.signature_image as receiving_doctor_signature
           
         FROM public.invoices i
-        JOIN public.profiles s ON i.sending_doctor_id = s.id
-        JOIN public.profiles r ON i.receiving_doctor_id = r.id
+        LEFT JOIN public.profiles s ON i.sending_doctor_id = s.id
+        LEFT JOIN public.profiles r ON i.receiving_doctor_id = r.id
         WHERE i.id = ${invoiceId}
       `;
       
       console.log('Invoice data loaded:', result[0]);
+      console.log('Sending doctor ID:', result[0]?.sending_doctor_id);
+      console.log('Sending doctor name:', result[0]?.sending_doctor_name);
+      console.log('Sending doctor data:', {
+        name: result[0]?.sending_doctor_name,
+        address: result[0]?.sending_doctor_address,
+        ico: result[0]?.sending_doctor_ico,
+        dic: result[0]?.sending_doctor_dic,
+        bank: result[0]?.sending_doctor_bank_account
+      });
       
       return result[0];
     },
@@ -168,18 +185,30 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
             {/* Customer (Sending Doctor - platí za službu) */}
             <div>
               <h2 className="text-sm font-semibold text-gray-500 mb-2">ODBERATEĽ</h2>
-              <div className="space-y-1">
-                <p className="font-bold text-lg">{formatDoctorName(invoice.sending_doctor_name)}</p>
-                {invoice.sending_doctor_address && (
-                  <p className="text-sm text-gray-700">{invoice.sending_doctor_address}</p>
-                )}
-                {invoice.sending_doctor_ico && (
-                  <p className="text-sm text-gray-700">IČO: {invoice.sending_doctor_ico}</p>
-                )}
-                {invoice.sending_doctor_dic && (
-                  <p className="text-sm text-gray-700">DIČ: {invoice.sending_doctor_dic}</p>
-                )}
-              </div>
+              {!invoice.sending_doctor_name ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                  <p className="text-sm text-yellow-800 font-semibold">⚠️ Chýbajú údaje odberateľa</p>
+                  <p className="text-xs text-yellow-700 mt-1">
+                    Odosielajúci lekár nevyplnil fakturačné údaje.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <p className="font-bold text-lg">{formatDoctorName(invoice.sending_doctor_name)}</p>
+                  {invoice.sending_doctor_address && (
+                    <p className="text-sm text-gray-700">{invoice.sending_doctor_address}</p>
+                  )}
+                  {invoice.sending_doctor_ico && (
+                    <p className="text-sm text-gray-700">IČO: {invoice.sending_doctor_ico}</p>
+                  )}
+                  {invoice.sending_doctor_dic && (
+                    <p className="text-sm text-gray-700">DIČ: {invoice.sending_doctor_dic}</p>
+                  )}
+                  {!invoice.sending_doctor_address && !invoice.sending_doctor_ico && !invoice.sending_doctor_dic && (
+                    <p className="text-xs text-yellow-600 mt-1">⚠️ Neúplné fakturačné údaje</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
