@@ -83,7 +83,7 @@ export const useMarkPatientExamined = () => {
       if (existingCommissions.length === 0) {
         await sql`
           INSERT INTO public.commissions (angiologist_id, appointment_id, amount, status)
-          VALUES (${appointment.angiologist_id}, ${appointmentId}, 50.00, 'pending')
+          VALUES (${appointment.angiologist_id}, ${appointmentId}, 14.00, 'pending')
         `;
       }
 
