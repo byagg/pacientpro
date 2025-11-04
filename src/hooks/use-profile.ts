@@ -12,6 +12,7 @@ export interface Profile {
   invoice_address: string | null;
   invoice_ico: string | null;
   invoice_dic: string | null;
+  signature_image: string | null; // base64 encoded image
   created_at: string;
 }
 
@@ -19,6 +20,7 @@ export interface ProfileUpdate {
   email?: string;
   full_name?: string;
   bank_account?: string | null;
+  signature_image?: string | null;
   invoice_name?: string | null;
   invoice_address?: string | null;
   invoice_ico?: string | null;
@@ -34,7 +36,7 @@ export const useProfile = (userId: string) => {
       try {
         const data = await sql`
         SELECT id, email, full_name, bank_account, ambulance_code,
-               invoice_name, invoice_address, invoice_ico, invoice_dic, created_at
+               invoice_name, invoice_address, invoice_ico, invoice_dic, signature_image, created_at
         FROM profiles
         WHERE id = ${userId}
         `;
@@ -76,10 +78,11 @@ export const useUpdateProfile = () => {
             invoice_address = ${updates.invoice_address || null},
             bank_account = ${updates.bank_account || null},
             invoice_ico = ${updates.invoice_ico || null},
-            invoice_dic = ${updates.invoice_dic || null}
+            invoice_dic = ${updates.invoice_dic || null},
+            signature_image = ${updates.signature_image || null}
           WHERE id = ${userId}
           RETURNING id, email, full_name, bank_account, ambulance_code,
-                    invoice_name, invoice_address, invoice_ico, invoice_dic, created_at
+                    invoice_name, invoice_address, invoice_ico, invoice_dic, signature_image, created_at
         `;
         
         console.log('Update result:', result);

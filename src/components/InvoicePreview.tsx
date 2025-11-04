@@ -27,6 +27,7 @@ interface InvoiceData {
   sending_doctor_ico: string | null;
   sending_doctor_dic: string | null;
   sending_doctor_bank_account: string | null;
+  sending_doctor_signature: string | null;
   
   // Receiving doctor (customer)
   receiving_doctor_name: string;
@@ -60,6 +61,7 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
           s.invoice_ico as sending_doctor_ico,
           s.invoice_dic as sending_doctor_dic,
           s.bank_account as sending_doctor_bank_account,
+          s.signature_image as sending_doctor_signature,
           
           COALESCE(r.invoice_name, r.full_name) as receiving_doctor_name,
           r.invoice_address as receiving_doctor_address,
@@ -254,9 +256,27 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
             </div>
           )}
 
+          {/* Signature */}
+          {invoice.sending_doctor_signature && (
+            <div className="flex justify-end mt-8 mb-4">
+              <div className="text-center">
+                <img 
+                  src={invoice.sending_doctor_signature} 
+                  alt="Podpis" 
+                  className="max-h-16 mb-2 border-b border-gray-400"
+                />
+                <p className="text-xs text-gray-600">Podpis dodávateľa</p>
+              </div>
+            </div>
+          )}
+
           {/* Footer */}
           <div className="text-xs text-gray-500 text-center pt-4 border-t border-gray-200">
-            <p>Faktúra bola vystavená elektronicky a je platná bez podpisu.</p>
+            <p>
+              {invoice.sending_doctor_signature 
+                ? "Faktúra bola vystavená elektronicky." 
+                : "Faktúra bola vystavená elektronicky a je platná bez podpisu."}
+            </p>
           </div>
         </div>
       </DialogContent>

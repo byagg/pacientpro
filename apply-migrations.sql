@@ -74,6 +74,21 @@ BEGIN
     END IF;
 END $$;
 
+-- Add signature_image for invoice signatures (base64 encoded JPG)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'profiles' 
+        AND column_name = 'signature_image'
+    ) THEN
+        ALTER TABLE public.profiles
+        ADD COLUMN signature_image TEXT;
+    END IF;
+END $$;
+
 -- ============================================
 -- Step 2: Create appointments table
 -- ============================================

@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Loader2, Check, X, AlertCircle } from "lucide-react";
+import { FileText, Loader2, Check, X, AlertCircle, Upload, Image as ImageIcon } from "lucide-react";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -50,8 +50,10 @@ const InvoiceDataSettings = ({
     bank_account: "",
     invoice_ico: "",
     invoice_dic: "",
+    signature_image: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (profile) {
@@ -61,24 +63,68 @@ const InvoiceDataSettings = ({
         bank_account: profile.bank_account || "",
         invoice_ico: profile.invoice_ico || "",
         invoice_dic: profile.invoice_dic || "",
+        signature_image: profile.signature_image || "",
       });
     }
   }, [profile]);
+
+  const handleSignatureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validácia typu súboru
+    if (!file.type.startsWith('image/')) {
+      toast({
+        variant: "destructive",
+        title: "Neplatný súbor",
+        description: "Môžete nahrať len obrázky (JPG, PNG)",
+      });
+      return;
+    }
+
+    // Validácia veľkosti (max 500KB)
+    if (file.size > 500 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "Súbor je príliš veľký",
+        description: "Maximálna veľkosť podpisu je 500KB",
+      });
+      return;
+    }
+
+    // Konverzia na base64
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setFormData(prev => ({ ...prev, signature_image: base64 }));
+      toast({
+        title: "Podpis nahraný",
+        description: "Uložte zmeny pre aplikovanie podpisu",
+      });
+    };
+    reader.onerror = () => {
+      toast({
+        variant: "destructive",
+        title: "Chyba",
+        description: "Nepodarilo sa načítať obrázok",
+      });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = async () => {
     try {
       // Validácia údajov
       const validatedData = invoiceDataSchema.parse(formData);
       
-      console.log('Saving invoice data:', validatedData);
-      
-      // Uloženie do databázy
+      // Uloženie do databázy (vrátane podpisu)
       const result = await updateProfile.mutateAsync({
         userId,
-        updates: validatedData,
+        updates: {
+          ...validatedData,
+          signature_image: formData.signature_image || null,
+        },
       });
-      
-      console.log('Invoice data saved successfully:', result);
       
       setIsEditing(false);
       setErrors({});
@@ -91,6 +137,7 @@ const InvoiceDataSettings = ({
           bank_account: result.bank_account || "",
           invoice_ico: result.invoice_ico || "",
           invoice_dic: result.invoice_dic || "",
+          signature_image: result.signature_image || "",
         });
       }
     } catch (error) {
@@ -294,6 +341,54 @@ const InvoiceDataSettings = ({
                 )}
                 <p className="text-xs text-muted-foreground">10 číslic</p>
               </div>
+            </div>
+
+            {/* Podpis na faktúru */}
+            <div className="space-y-2 border-t pt-4">
+              <Label>Podpis na faktúru</Label>
+              <div className="flex items-center gap-4">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleSignatureUpload}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Nahrať podpis
+                </Button>
+                {formData.signature_image && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFormData({ ...formData, signature_image: "" })}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Odstrániť
+                  </Button>
+                )}
+              </div>
+              {formData.signature_image && (
+                <div className="mt-2 p-3 bg-muted/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-2">Náhľad podpisu:</p>
+                  <img 
+                    src={formData.signature_image} 
+                    alt="Podpis" 
+                    className="max-h-20 border rounded"
+                  />
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Odporúčaný formát: JPG/PNG, max. 500KB. Podpis sa zobrazí na faktúre.
+              </p>
             </div>
 
             <div className="flex gap-2">
