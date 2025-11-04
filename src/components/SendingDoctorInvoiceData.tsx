@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, MapPin, CreditCard, Building2, FileText, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { User, MapPin, CreditCard, Building2, FileText, ChevronDown, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { sql } from "@/integrations/neon/client";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDoctorName } from "@/lib/utils-doctors";
+import { useNavigate } from "react-router-dom";
 
 interface SendingDoctorInvoiceDataProps {
   receivingDoctorId: string;
@@ -221,6 +223,34 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Action button to create invoice */}
+            <div className="border-t pt-4 mt-4">
+              <Button
+                onClick={() => {
+                  // Scroll to the invoice creator section
+                  const invoiceCreator = document.querySelector('[data-invoice-creator]');
+                  if (invoiceCreator) {
+                    invoiceCreator.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // Small delay to ensure scroll completes
+                    setTimeout(() => {
+                      // Dispatch custom event to set the doctor filter
+                      window.dispatchEvent(new CustomEvent('set-doctor-filter', { 
+                        detail: { doctorId: selectedDoctorId } 
+                      }));
+                    }, 500);
+                  }
+                }}
+                className="w-full gap-2"
+                variant="default"
+              >
+                <Plus className="h-4 w-4" />
+                Vytvoriť faktúru pre tohto lekára
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                Prejde na sekciu vytvorenia faktúry nižšie
+              </p>
             </div>
 
             {!hasCompleteData && (

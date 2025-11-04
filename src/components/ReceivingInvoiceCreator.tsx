@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -153,6 +153,20 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
     return selectedPatients.length * PATIENT_FEE;
   };
 
+  // Listen for doctor filter events from SendingDoctorInvoiceData
+  useEffect(() => {
+    const handleSetDoctorFilter = (event: any) => {
+      const doctorId = event.detail?.doctorId;
+      if (doctorId) {
+        setSelectedDoctorFilter(doctorId);
+        setSearchTerm(""); // Clear search when filter is set
+      }
+    };
+
+    window.addEventListener('set-doctor-filter', handleSetDoctorFilter);
+    return () => window.removeEventListener('set-doctor-filter', handleSetDoctorFilter);
+  }, []);
+
   if (isLoading) {
     return (
       <Card className="shadow-card">
@@ -186,7 +200,7 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
   }
 
   return (
-    <Card className="shadow-card">
+    <Card className="shadow-card" data-invoice-creator>
       <CardHeader>
         <div className="flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" />

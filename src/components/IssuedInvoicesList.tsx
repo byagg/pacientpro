@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, User, Euro, Loader2, Eye } from "lucide-react";
+import { FileText, Calendar, User, Euro, Loader2, Eye, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
 import { sql } from "@/integrations/neon/client";
 import InvoicePreview from "./InvoicePreview";
 import { formatDoctorName } from "@/lib/utils-doctors";
+import { useDeleteInvoice } from "@/hooks/use-invoices";
 
 interface IssuedInvoicesListProps {
   receivingDoctorId: string;
@@ -28,6 +29,7 @@ interface IssuedInvoice {
 
 const IssuedInvoicesList = ({ receivingDoctorId }: IssuedInvoicesListProps) => {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const deleteInvoice = useDeleteInvoice();
 
   // Fetch invoices issued by this receiving doctor (they are the recipient)
   const { data: invoices = [], isLoading } = useQuery({
@@ -78,6 +80,13 @@ const IssuedInvoicesList = ({ receivingDoctorId }: IssuedInvoicesListProps) => {
       default:
         return status;
     }
+  };
+
+  const handleDelete = async (invoiceId: string, invoiceNumber: string) => {
+    if (!window.confirm(`Naozaj chcete vymazať faktúru ${invoiceNumber}? Táto akcia je nenávratná.`)) {
+      return;
+    }
+    await deleteInvoice.mutateAsync(invoiceId);
   };
 
   if (isLoading) {
@@ -151,15 +160,23 @@ const IssuedInvoicesList = ({ receivingDoctorId }: IssuedInvoicesListProps) => {
                     </div>
                   </div>
 
-                  <div className="mt-3 pt-3 border-t">
+                  <div className="mt-3 pt-3 border-t flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full"
+                      className="flex-1"
                       onClick={() => setSelectedInvoiceId(invoice.id)}
                     >
                       <Eye className="mr-2 h-4 w-4" />
-                      Zobraziť faktúru
+                      Zobraziť
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(invoice.id, invoice.invoice_number)}
+                      disabled={deleteInvoice.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </CardContent>

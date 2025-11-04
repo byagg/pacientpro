@@ -232,3 +232,44 @@ export const useMarkInvoicePaid = () => {
   });
 };
 
+// Delete invoice
+export const useDeleteInvoice = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (invoiceId: string) => {
+      // First delete invoice items (cascading delete)
+      await sql`
+        DELETE FROM public.invoice_items
+        WHERE invoice_id = ${invoiceId}
+      `;
+      
+      // Then delete the invoice
+      await sql`
+        DELETE FROM public.invoices
+        WHERE id = ${invoiceId}
+      `;
+      
+      return invoiceId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices-sending"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices-receiving"] });
+      queryClient.invalidateQueries({ queryKey: ["examined-patients-for-invoice"] });
+      queryClient.invalidateQueries({ queryKey: ["invoice-detail"] });
+      toast({
+        title: "Faktúra vymazaná",
+        description: "Faktúra bola úspešne odstránená",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Chyba",
+        description: error.message || "Nepodarilo sa vymazať faktúru",
+      });
+    },
+  });
+};
+
