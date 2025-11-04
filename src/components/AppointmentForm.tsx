@@ -63,12 +63,12 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
 
   const generatePatientNumber = (code: string, datetime: string) => {
     const date = new Date(datetime);
-    const year = date.getFullYear();
+    const year = String(date.getFullYear() % 100).padStart(2, '0'); // Last 2 digits of year
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${code}-${year}/${month}/${day}/${hours}/${minutes}`;
+    return `${code}-${year}${month}${day}-${hours}${minutes}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
