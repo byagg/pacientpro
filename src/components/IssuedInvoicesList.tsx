@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Calendar, User, Euro, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FileText, Calendar, User, Euro, Loader2, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
 import { sql } from "@/integrations/neon/client";
+import InvoicePreview from "./InvoicePreview";
 
 interface IssuedInvoicesListProps {
   receivingDoctorId: string;
@@ -23,6 +26,8 @@ interface IssuedInvoice {
 }
 
 const IssuedInvoicesList = ({ receivingDoctorId }: IssuedInvoicesListProps) => {
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+
   // Fetch invoices issued by this receiving doctor (they are the recipient)
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["issued-invoices", receivingDoctorId],
@@ -144,10 +149,31 @@ const IssuedInvoicesList = ({ receivingDoctorId }: IssuedInvoicesListProps) => {
                       </p>
                     </div>
                   </div>
+
+                  <div className="mt-3 pt-3 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setSelectedInvoiceId(invoice.id)}
+                    >
+                      <Eye className="mr-2 h-4 w-4" />
+                      Zobraziť faktúru
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </div>
+        )}
+
+        {/* Invoice Preview Dialog */}
+        {selectedInvoiceId && (
+          <InvoicePreview
+            invoiceId={selectedInvoiceId}
+            open={!!selectedInvoiceId}
+            onOpenChange={(open) => !open && setSelectedInvoiceId(null)}
+          />
         )}
       </CardContent>
     </Card>
