@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   email TEXT NOT NULL UNIQUE,
   bank_account TEXT,
   password_hash TEXT,
+  user_type TEXT CHECK (user_type IN ('sending', 'receiving')),
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
@@ -40,6 +41,21 @@ BEGIN
     ) THEN
         ALTER TABLE public.profiles
         ADD COLUMN password_hash TEXT;
+    END IF;
+END $$;
+
+-- Add user_type if table exists but column doesn't
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'profiles' 
+        AND column_name = 'user_type'
+    ) THEN
+        ALTER TABLE public.profiles
+        ADD COLUMN user_type TEXT CHECK (user_type IN ('sending', 'receiving'));
     END IF;
 END $$;
 
