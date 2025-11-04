@@ -199,6 +199,7 @@ CREATE TABLE IF NOT EXISTS public.invoices (
   patient_count INTEGER NOT NULL,
   issue_date TIMESTAMPTZ DEFAULT now() NOT NULL,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'cancelled')),
+  paid_at TIMESTAMPTZ,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
