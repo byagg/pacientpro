@@ -97,12 +97,12 @@ const Dashboard = () => {
               {user.user_type === 'receiving' ? (
                 <>
                   <TabsTrigger value="section1" className="gap-2">
-                    <Clock className="h-4 w-4" />
-                    Ordinačné hodiny
-                  </TabsTrigger>
-                  <TabsTrigger value="section2" className="gap-2">
                     <Users className="h-4 w-4" />
                     Pacienti
+                  </TabsTrigger>
+                  <TabsTrigger value="section2" className="gap-2">
+                    <Clock className="h-4 w-4" />
+                    Ordinačné hodiny
                   </TabsTrigger>
                   <TabsTrigger value="section3" className="gap-2">
                     <FileText className="h-4 w-4" />
@@ -131,12 +131,12 @@ const Dashboard = () => {
               // Receiving doctor sections
               <>
                 <TabsContent value="section1" className="space-y-6">
-                  <OfficeHoursSettings receivingDoctorId={user.id} />
+                  <WaitingPatientsList receivingDoctorId={user.id} />
+                  <ExaminedPatientsList receivingDoctorId={user.id} />
                 </TabsContent>
 
                 <TabsContent value="section2" className="space-y-6">
-                  <WaitingPatientsList receivingDoctorId={user.id} />
-                  <ExaminedPatientsList receivingDoctorId={user.id} />
+                  <OfficeHoursSettings receivingDoctorId={user.id} />
                 </TabsContent>
 
                 <TabsContent value="section3" className="space-y-6">

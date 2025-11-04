@@ -8,6 +8,7 @@ import { sk } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
 import { sql } from "@/integrations/neon/client";
 import InvoicePreview from "./InvoicePreview";
+import { formatDoctorName } from "@/lib/utils-doctors";
 
 interface IssuedInvoicesListProps {
   receivingDoctorId: string;
@@ -122,7 +123,7 @@ const IssuedInvoicesList = ({ receivingDoctorId }: IssuedInvoicesListProps) => {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <User className="h-3 w-3" />
-                          <span>Pre: {invoice.sending_doctor_name}</span>
+                          <span>Pre: {formatDoctorName(invoice.sending_doctor_name)}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />

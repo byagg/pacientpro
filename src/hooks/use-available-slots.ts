@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { sql } from "@/integrations/neon/client";
+import { formatDoctorName } from "@/lib/utils-doctors";
 
 export interface AvailableSlot {
   receiving_doctor_id: string;
@@ -76,7 +77,7 @@ export const generateTimeSlotsForDate = (
         const timeString = `${String(slotHour).padStart(2, '0')}:${String(slotMinute).padStart(2, '0')}`;
         slots.push({
           time: slotTime.toISOString(),
-          label: `${timeString} - ${oh.receiving_doctor_name}`,
+          label: `${timeString} - ${formatDoctorName(oh.receiving_doctor_name)}`,
           receivingDoctorId: oh.receiving_doctor_id,
           receivingDoctorName: oh.receiving_doctor_name,
         });

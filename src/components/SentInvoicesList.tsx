@@ -4,6 +4,7 @@ import { FileText, Calendar, User, DollarSign, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useSendingInvoices } from "@/hooks/use-invoices";
+import { formatDoctorName } from "@/lib/utils-doctors";
 
 interface SentInvoicesListProps {
   userId: string;
@@ -81,7 +82,7 @@ const SentInvoicesList = ({ userId }: SentInvoicesListProps) => {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                       <User className="h-4 w-4" />
-                      <span>Pre: {invoice.receiving_doctor_name}</span>
+                      <span>Pre: {formatDoctorName(invoice.receiving_doctor_name)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                       <Calendar className="h-4 w-4" />

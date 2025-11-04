@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
 import { sql } from "@/integrations/neon/client";
+import { formatDoctorName } from "@/lib/utils-doctors";
 
 interface InvoicePreviewProps {
   invoiceId: string;
@@ -151,7 +152,7 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
             <div>
               <h2 className="text-sm font-semibold text-gray-500 mb-2">DODÁVATEĽ</h2>
               <div className="space-y-1">
-                <p className="font-bold text-lg">{invoice.receiving_doctor_name}</p>
+                <p className="font-bold text-lg">{formatDoctorName(invoice.receiving_doctor_name)}</p>
                 {invoice.receiving_doctor_address && (
                   <p className="text-sm text-gray-700">{invoice.receiving_doctor_address}</p>
                 )}
@@ -168,7 +169,7 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
             <div>
               <h2 className="text-sm font-semibold text-gray-500 mb-2">ODBERATEĽ</h2>
               <div className="space-y-1">
-                <p className="font-bold text-lg">{invoice.sending_doctor_name}</p>
+                <p className="font-bold text-lg">{formatDoctorName(invoice.sending_doctor_name)}</p>
                 {invoice.sending_doctor_address && (
                   <p className="text-sm text-gray-700">{invoice.sending_doctor_address}</p>
                 )}

@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useAppointments, useDeleteAppointment } from "@/hooks/use-appointments";
 import { useCommissions } from "@/hooks/use-commissions";
+import { formatDoctorName } from "@/lib/utils-doctors";
 
 interface AppointmentsListProps {
   userId: string;
@@ -124,7 +125,7 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
                       <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 mt-1">
                         <User className="h-4 w-4" />
                         <span>
-                          Prijímajúci lekár: {appointment.receiving_doctor_name}
+                          Prijímajúci lekár: {formatDoctorName(appointment.receiving_doctor_name)}
                         </span>
                       </div>
                     )}

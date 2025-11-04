@@ -7,6 +7,7 @@ import { FileText, Calendar, User, DollarSign, Loader2, Eye, Check } from "lucid
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useReceivingInvoices, useInvoiceItems, useMarkInvoicePaid, type InvoiceWithDetails } from "@/hooks/use-invoices";
+import { formatDoctorName } from "@/lib/utils-doctors";
 
 interface ReceivedInvoicesListProps {
   receivingDoctorId: string;
@@ -88,7 +89,7 @@ const ReceivedInvoicesList = ({ receivingDoctorId }: ReceivedInvoicesListProps) 
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                         <User className="h-4 w-4" />
-                        <span>Od: {invoice.sending_doctor_name}</span>
+                        <span>Od: {formatDoctorName(invoice.sending_doctor_name)}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                         <Calendar className="h-4 w-4" />
@@ -155,7 +156,7 @@ const ReceivedInvoicesList = ({ receivingDoctorId }: ReceivedInvoicesListProps) 
               <div className="border rounded-lg p-4 bg-muted/50">
                 <h3 className="font-semibold mb-3">Dodávateľ</h3>
                 <div className="space-y-1 text-sm">
-                  <p className="font-medium">{selectedInvoice.sending_doctor_invoice_data?.name || selectedInvoice.sending_doctor_name}</p>
+                  <p className="font-medium">{formatDoctorName(selectedInvoice.sending_doctor_invoice_data?.name || selectedInvoice.sending_doctor_name)}</p>
                   {selectedInvoice.sending_doctor_invoice_data?.address && (
                     <p className="text-muted-foreground whitespace-pre-line">
                       {selectedInvoice.sending_doctor_invoice_data.address}

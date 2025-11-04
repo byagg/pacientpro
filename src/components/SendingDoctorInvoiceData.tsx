@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { sql } from "@/integrations/neon/client";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatDoctorName } from "@/lib/utils-doctors";
 
 interface SendingDoctorInvoiceDataProps {
   receivingDoctorId: string;
@@ -116,7 +117,7 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
               ) : (
                 sendingDoctors.map((doctor) => (
                   <SelectItem key={doctor.id} value={doctor.id}>
-                    {doctor.full_name}
+                    {formatDoctorName(doctor.full_name)}
                   </SelectItem>
                 ))
               )}
