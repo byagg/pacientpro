@@ -32,19 +32,24 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
 
   // Fetch all sending doctors who have sent patients to this receiving doctor
   // Auto-refresh every 30 seconds to get updated list
-  const { data: sendingDoctors = [], isLoading: loadingDoctors } = useQuery({
+  const { data: sendingDoctors = [], isLoading: loadingDoctors, error: loadingError } = useQuery({
     queryKey: ["sending-doctors-list", receivingDoctorId],
     queryFn: async () => {
+      console.log('Fetching sending doctors for receiving doctor:', receivingDoctorId);
+      
       const result = await sql<SendingDoctor[]>`
         SELECT DISTINCT
           p.id,
           p.full_name
         FROM public.profiles p
         INNER JOIN public.appointments a ON a.angiologist_id = p.id
-        WHERE a.examined_at IS NOT NULL
-          AND (a.examined_by = ${receivingDoctorId} OR a.receiving_doctor_id = ${receivingDoctorId})
+        WHERE (a.examined_by = ${receivingDoctorId} OR a.receiving_doctor_id = ${receivingDoctorId})
         ORDER BY p.full_name
       `;
+      
+      console.log('Found sending doctors:', result.length);
+      console.log('Sending doctors list:', result);
+      
       return result;
     },
     enabled: !!receivingDoctorId,
@@ -53,9 +58,11 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
 
   // Fetch profile of selected sending doctor
   // Auto-refresh every 15 seconds to get updated invoice data
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, error: profileError } = useQuery({
     queryKey: ["sending-doctor-profile", selectedDoctorId],
     queryFn: async () => {
+      console.log('Fetching profile for sending doctor:', selectedDoctorId);
+      
       const result = await sql<DoctorProfile[]>`
         SELECT 
           id,
@@ -69,6 +76,9 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
         FROM public.profiles
         WHERE id = ${selectedDoctorId}
       `;
+      
+      console.log('Profile loaded:', result[0]);
+      
       return result[0] || null;
     },
     enabled: !!selectedDoctorId,
@@ -98,6 +108,16 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Error message */}
+        {loadingError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <p className="text-sm text-red-800 font-semibold">❌ Chyba pri načítavaní lekárov</p>
+            <p className="text-xs text-red-700 mt-1">
+              {loadingError instanceof Error ? loadingError.message : 'Nepodarilo sa načítať zoznam lekárov'}
+            </p>
+          </div>
+        )}
+        
         {/* Doctor selector */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Vyberte odosielajúceho lekára</label>
@@ -112,7 +132,7 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
                 </SelectItem>
               ) : sendingDoctors.length === 0 ? (
                 <SelectItem value="empty" disabled>
-                  Žiadni lekári
+                  {loadingError ? 'Chyba pri načítavaní' : 'Žiadni lekári'}
                 </SelectItem>
               ) : (
                 sendingDoctors.map((doctor) => (
@@ -123,11 +143,23 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
               )}
             </SelectContent>
           </Select>
+          {!loadingError && sendingDoctors.length === 0 && !loadingDoctors && (
+            <p className="text-xs text-muted-foreground">
+              💡 Odosielajúci lekári sa zobrazia po tom, čo k vám niekto odošle pacienta.
+            </p>
+          )}
         </div>
 
         {!selectedDoctorId ? (
           <div className="py-8 text-center text-muted-foreground">
             <p>Vyberte lekára pre zobrazenie údajov</p>
+          </div>
+        ) : profileError ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <p className="text-sm text-red-800 font-semibold">❌ Chyba pri načítavaní profilu</p>
+            <p className="text-xs text-red-700 mt-1">
+              {profileError instanceof Error ? profileError.message : 'Nepodarilo sa načítať profil lekára'}
+            </p>
           </div>
         ) : isLoading ? (
           <div className="py-8 text-center text-muted-foreground">
