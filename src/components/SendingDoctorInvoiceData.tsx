@@ -30,6 +30,7 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
 
   // Fetch all sending doctors who have sent patients to this receiving doctor
+  // Auto-refresh every 30 seconds to get updated list
   const { data: sendingDoctors = [], isLoading: loadingDoctors } = useQuery({
     queryKey: ["sending-doctors-list", receivingDoctorId],
     queryFn: async () => {
@@ -46,9 +47,11 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
       return result;
     },
     enabled: !!receivingDoctorId,
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   // Fetch profile of selected sending doctor
+  // Auto-refresh every 15 seconds to get updated invoice data
   const { data: profile, isLoading } = useQuery({
     queryKey: ["sending-doctor-profile", selectedDoctorId],
     queryFn: async () => {
@@ -68,6 +71,7 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
       return result[0] || null;
     },
     enabled: !!selectedDoctorId,
+    refetchInterval: 15000, // Refresh every 15 seconds
   });
 
   const hasCompleteData = profile?.invoice_name && profile?.invoice_address && profile?.bank_account;

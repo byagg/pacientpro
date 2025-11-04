@@ -133,12 +133,20 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
 
       const patientNumber = generatePatientNumber(ambulanceCode, finalAppointmentDate);
 
+      // Extract receiving_doctor_id from selected slot (for sending doctors)
+      let receivingDoctorId: string | null = null;
+      if (userType === 'sending' && selectedSlot) {
+        const selectedSlotData = timeSlots.find(slot => slot.time === selectedSlot);
+        receivingDoctorId = selectedSlotData?.receivingDoctorId || null;
+      }
+
       await createAppointment.mutateAsync({
         angiologist_id: userId,
         patient_number: patientNumber,
         appointment_date: appointmentDateObj.toISOString(),
         notes: procedureType,
         status: 'scheduled',
+        receiving_doctor_id: receivingDoctorId,
       });
 
       // Reset form

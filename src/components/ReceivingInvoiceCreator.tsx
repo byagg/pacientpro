@@ -35,6 +35,7 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
   const createInvoice = useCreateInvoice();
 
   // Fetch examined patients from last year that haven't been invoiced yet
+  // Auto-refresh every 20 seconds to detect newly examined patients
   const { data: patients = [], isLoading, error } = useQuery({
     queryKey: ["examined-patients-for-invoice", receivingDoctorId],
     queryFn: async () => {
@@ -68,6 +69,7 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
     enabled: !!receivingDoctorId,
     retry: 2,
     retryDelay: 1000,
+    refetchInterval: 20000, // Refresh every 20 seconds
   });
 
   // Filter patients

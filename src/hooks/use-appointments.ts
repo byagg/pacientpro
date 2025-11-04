@@ -11,6 +11,7 @@ export interface Appointment {
   status: string | null;
   notes: string | null;
   receiving_doctor_id: string | null;
+  receiving_doctor_name: string | null;
   examined_at: string | null;
   examined_by: string | null;
   created_at: string;
@@ -22,6 +23,7 @@ export interface AppointmentInsert {
   appointment_date: string;
   notes: string | null;
   status?: string | null;
+  receiving_doctor_id?: string | null;
 }
 
 export const useAppointments = (userId: string) => {
@@ -31,9 +33,13 @@ export const useAppointments = (userId: string) => {
       if (!userId) return [];
       
       const data = await sql`
-        SELECT * FROM public.appointments
-        WHERE angiologist_id = ${userId}
-        ORDER BY appointment_date DESC
+        SELECT 
+          a.*,
+          p.full_name as receiving_doctor_name
+        FROM public.appointments a
+        LEFT JOIN public.profiles p ON a.receiving_doctor_id = p.id
+        WHERE a.angiologist_id = ${userId}
+        ORDER BY a.appointment_date DESC
       `;
 
       return (data as Appointment[]) || [];
@@ -49,8 +55,8 @@ export const useCreateAppointment = () => {
   return useMutation({
     mutationFn: async (data: AppointmentInsert) => {
       const [result] = await sql`
-        INSERT INTO public.appointments (angiologist_id, patient_number, appointment_date, notes, status)
-        VALUES (${data.angiologist_id}, ${data.patient_number}, ${data.appointment_date}, ${data.notes}, ${data.status || 'scheduled'})
+        INSERT INTO public.appointments (angiologist_id, patient_number, appointment_date, notes, status, receiving_doctor_id)
+        VALUES (${data.angiologist_id}, ${data.patient_number}, ${data.appointment_date}, ${data.notes}, ${data.status || 'scheduled'}, ${data.receiving_doctor_id || null})
         RETURNING *
       `;
 

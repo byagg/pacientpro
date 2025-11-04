@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, CheckCircle2, DollarSign, Trash2 } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, DollarSign, Trash2, User } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useAppointments, useDeleteAppointment } from "@/hooks/use-appointments";
@@ -120,6 +120,14 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
                     <p className="font-semibold text-lg">
                       Pacient: {appointment.patient_number}
                     </p>
+                    {appointment.receiving_doctor_name && (
+                      <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 mt-1">
+                        <User className="h-4 w-4" />
+                        <span>
+                          Prijímajúci lekár: {appointment.receiving_doctor_name}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                       <Clock className="h-4 w-4" />
                       <span>
