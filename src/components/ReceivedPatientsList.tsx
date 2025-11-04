@@ -25,7 +25,6 @@ const ReceivedPatientsList = ({ receivingDoctorId }: ReceivedPatientsListProps) 
   const { toast } = useToast();
 
   const [examinedTime, setExaminedTime] = useState<{ [key: string]: string }>({});
-  const [paidTime, setPaidTime] = useState<{ [key: string]: string }>({});
 
   // Filter patients - separate waiting and examined
   const { waitingPatients, examinedPatients, commissions } = useMemo(() => {
@@ -81,20 +80,13 @@ const ReceivedPatientsList = ({ receivingDoctorId }: ReceivedPatientsListProps) 
     setExaminedTime({ ...examinedTime, [appointmentId]: "" });
   };
 
-  const handleSetNowPaid = (appointmentId: string) => {
-    setPaidTime({ ...paidTime, [appointmentId]: getCurrentDateTime() });
-  };
-
-  const handleMarkPaid = async (commissionId: string, appointmentId: string) => {
-    const time = paidTime[appointmentId] || getCurrentDateTime();
-    const paidAt = new Date(time).toISOString();
+  const handleMarkPaid = async (commissionId: string) => {
+    const paidAt = new Date().toISOString();
 
     await markPaid.mutateAsync({
       commissionId,
       paidAt,
     });
-
-    setPaidTime({ ...paidTime, [appointmentId]: "" });
   };
 
   const getCommissionForAppointment = (appointmentId: string) => {
@@ -333,52 +325,24 @@ const ReceivedPatientsList = ({ receivingDoctorId }: ReceivedPatientsListProps) 
 
                           {/* Pay commission button */}
                           {!isPaid && (
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <Label htmlFor={`paid-time-${patient.id}`} className="text-sm font-medium">
-                                  Čas vyplatenia:
-                                </Label>
-                                <div className="flex-1 flex items-center gap-2">
-                                  <input
-                                    id={`paid-time-${patient.id}`}
-                                    type="datetime-local"
-                                    value={paidTime[patient.id] || ""}
-                                    onChange={(e) =>
-                                      setPaidTime({ ...paidTime, [patient.id]: e.target.value })
-                                    }
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                  />
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleSetNowPaid(patient.id)}
-                                    className="gap-1"
-                                  >
-                                    <Clock className="h-3 w-3" />
-                                    Teraz
-                                  </Button>
-                                </div>
-                              </div>
-                              <Button
-                                onClick={() => handleMarkPaid(commission.id, patient.id)}
-                                disabled={markPaid.isPending}
-                                className="w-full"
-                                size="sm"
-                              >
-                                {markPaid.isPending ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Ukladám...
-                                  </>
-                                ) : (
-                                  <>
-                                    <DollarSign className="mr-2 h-4 w-4" />
-                                    Zaplatiť poplatok odosielajúcemu lekárovi
-                                  </>
-                                )}
-                              </Button>
-                            </div>
+                            <Button
+                              onClick={() => handleMarkPaid(commission.id)}
+                              disabled={markPaid.isPending}
+                              className="w-full"
+                              size="sm"
+                            >
+                              {markPaid.isPending ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Ukladám...
+                                </>
+                              ) : (
+                                <>
+                                  <DollarSign className="mr-2 h-4 w-4" />
+                                  Zaplatiť poplatok odosielajúcemu lekárovi
+                                </>
+                              )}
+                            </Button>
                           )}
                         </div>
                       )}
