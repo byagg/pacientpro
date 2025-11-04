@@ -1,13 +1,11 @@
-import { useState } from "react";
+import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { Calendar, Clock, CheckCircle2, DollarSign, Loader2 } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, DollarSign } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useAppointments } from "@/hooks/use-appointments";
-import { useCommissions, useMarkCommissionPaid } from "@/hooks/use-commissions";
+import { useCommissions } from "@/hooks/use-commissions";
 
 interface AppointmentsListProps {
   userId: string;
@@ -16,36 +14,17 @@ interface AppointmentsListProps {
 const AppointmentsList = ({ userId }: AppointmentsListProps) => {
   const { data: appointments = [], isLoading } = useAppointments(userId);
   const { data: commissions = [] } = useCommissions(userId);
-  const markPaid = useMarkCommissionPaid();
 
-  const [paidTime, setPaidTime] = useState<{ [key: string]: string }>({});
-
-  // Format current date/time for datetime-local input
-  const getCurrentDateTime = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
-
-  const handleSetNow = (appointmentId: string) => {
-    setPaidTime({ ...paidTime, [appointmentId]: getCurrentDateTime() });
-  };
-
-  const handleMarkPaid = async (commissionId: string, appointmentId: string) => {
-    const time = paidTime[appointmentId] || getCurrentDateTime();
-    const paidAt = new Date(time).toISOString();
-
-    await markPaid.mutateAsync({
-      commissionId,
-      paidAt,
+  // Filter appointments - keep only those from the last year
+  const filteredAppointments = useMemo(() => {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    
+    return appointments.filter(appointment => {
+      const appointmentDate = new Date(appointment.appointment_date);
+      return appointmentDate >= oneYearAgo;
     });
-
-    setPaidTime({ ...paidTime, [appointmentId]: "" });
-  };
+  }, [appointments]);
 
   // Get commission for appointment
   const getCommissionForAppointment = (appointmentId: string) => {
@@ -100,13 +79,13 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {appointments.length === 0 ? (
+        {filteredAppointments.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">
-            Zatiaľ nemáte žiadne rezervácie
+            Zatiaľ nemáte žiadne rezervácie z posledného roka
           </p>
         ) : (
           <div className="space-y-4">
-            {appointments.map((appointment) => {
+            {filteredAppointments.map((appointment) => {
               const commission = getCommissionForAppointment(appointment.id);
               const isExamined = appointment.examined_at !== null;
               const isPaid = commission?.status === 'paid';
@@ -160,55 +139,25 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
                     </p>
                   )}
 
-                  {/* Actions - only for paying commission */}
-                  {commission && !isPaid && isExamined && (
-                    <div className="border-t pt-3 mt-3 space-y-3">
-                      <div className="space-y-2">
+                  {/* Commission status display (read-only for sending doctor) */}
+                  {commission && (
+                    <div className="border-t pt-3 mt-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Manipulačný poplatok:</span>
                         <div className="flex items-center gap-2">
-                          <Label htmlFor={`paid-time-${appointment.id}`} className="text-sm font-medium">
-                            Čas vyplatenia ({commission.amount} €):
-                          </Label>
-                          <div className="flex-1 flex items-center gap-2">
-                            <input
-                              id={`paid-time-${appointment.id}`}
-                              type="datetime-local"
-                              value={paidTime[appointment.id] || ""}
-                              onChange={(e) =>
-                                setPaidTime({ ...paidTime, [appointment.id]: e.target.value })
-                              }
-                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleSetNow(appointment.id)}
-                              className="gap-1"
-                            >
-                              <Clock className="h-3 w-3" />
-                              Teraz
-                            </Button>
-                          </div>
-                        </div>
-                        <Button
-                          onClick={() => handleMarkPaid(commission.id, appointment.id)}
-                          disabled={markPaid.isPending}
-                          className="w-full"
-                          size="sm"
-                          variant="default"
-                        >
-                          {markPaid.isPending ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Ukladám...
-                            </>
+                          <span className="text-sm font-semibold">{commission.amount} €</span>
+                          {isPaid ? (
+                            <Badge variant="default" className="bg-green-600">
+                              <CheckCircle2 className="mr-1 h-3 w-3" />
+                              Vyplatené
+                            </Badge>
                           ) : (
-                            <>
-                              <DollarSign className="mr-2 h-4 w-4" />
-                              Označiť poplatok ako vyplatený
-                            </>
+                            <Badge variant="secondary">
+                              <Clock className="mr-1 h-3 w-3" />
+                              Čaká na vyplatenie
+                            </Badge>
                           )}
-                        </Button>
+                        </div>
                       </div>
                     </div>
                   )}

@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, type User } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Calendar } from "lucide-react";
+import { LogOut, Calendar, UserCheck, UserPlus } from "lucide-react";
 import AppointmentForm from "@/components/AppointmentForm";
 import AppointmentsList from "@/components/AppointmentsList";
 import CommissionsCard from "@/components/CommissionsCard";
@@ -61,9 +62,25 @@ const Dashboard = () => {
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">Dashboard</h2>
+          <div className="flex items-center gap-3 mb-2">
+            <h2 className="text-3xl font-bold">Dashboard</h2>
+            {user?.user_type === 'receiving' ? (
+              <Badge variant="default" className="gap-1.5 px-3 py-1">
+                <UserCheck className="h-4 w-4" />
+                Prijímajúci lekár
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="gap-1.5 px-3 py-1">
+                <UserPlus className="h-4 w-4" />
+                Odosielajúci lekár
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
-            Spravujte rezervácie a sledujte svoje manipulačné poplatky
+            {user?.user_type === 'receiving' 
+              ? "Spravujte ordinančné hodiny a vyšetrených pacientov"
+              : "Spravujte rezervácie a prijímajte manipulačné poplatky"
+            }
           </p>
         </div>
 

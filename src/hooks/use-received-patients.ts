@@ -9,14 +9,14 @@ export interface ReceivedAppointment extends Appointment {
   sending_doctor_email: string;
 }
 
-// Fetch received patients (all scheduled appointments that can be examined)
+// Fetch received patients (all appointments - both waiting and examined)
 export const useReceivedPatients = (receivingDoctorId: string) => {
   return useQuery({
     queryKey: ["received-patients", receivingDoctorId],
     queryFn: async () => {
       try {
-        // Get all scheduled appointments (not yet examined)
-        // These are all patients sent by sending doctors that haven't been examined yet
+        // Get all appointments (waiting and examined)
+        // These are all patients sent by sending doctors
         const appointments = await sql<ReceivedAppointment[]>`
           SELECT 
             a.*,
@@ -24,9 +24,10 @@ export const useReceivedPatients = (receivingDoctorId: string) => {
             p.email as sending_doctor_email
           FROM public.appointments a
           JOIN public.profiles p ON a.angiologist_id = p.id
-          WHERE a.status = 'scheduled'
-            AND a.examined_at IS NULL
-          ORDER BY a.appointment_date ASC
+          WHERE a.status IN ('scheduled', 'completed')
+          ORDER BY 
+            CASE WHEN a.examined_at IS NULL THEN 0 ELSE 1 END,
+            a.appointment_date ASC
         `;
         
         console.log('Received patients query result:', appointments.length, 'patients');
