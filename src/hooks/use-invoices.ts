@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { sql } from "@/integrations/neon/client";
 import { useToast } from "@/hooks/use-toast";
+import { PATIENT_FEE } from "@/lib/constants";
 
 export interface Invoice {
   id: string;
@@ -115,50 +116,73 @@ export const useCreateInvoice = () => {
       const invoiceNumber = `INV-${year}${month}${day}-${random}`;
 
       // Create invoice
-      console.log('Creating invoice with data:', {
+      console.log('useCreateInvoice: Creating invoice with data:', {
         sending_doctor_id: data.sending_doctor_id,
         receiving_doctor_id: data.receiving_doctor_id,
         patient_count: data.appointment_ids.length,
-        total_amount: data.total_amount
+        total_amount: data.total_amount,
+        appointment_ids: data.appointment_ids
       });
       
-      const [invoice] = await sql<Invoice[]>`
-        INSERT INTO public.invoices (
-          invoice_number, 
-          sending_doctor_id, 
-          receiving_doctor_id, 
-          total_amount, 
-          patient_count,
-          notes,
-          status
-        )
-        VALUES (
-          ${invoiceNumber},
-          ${data.sending_doctor_id},
-          ${data.receiving_doctor_id},
-          ${data.total_amount},
-          ${data.appointment_ids.length},
-          ${data.notes || null},
-          'pending'
-        )
-        RETURNING *
-      `;
-      
-      console.log('Invoice created:', invoice);
-
-      // Create invoice items
-      for (const appointmentId of data.appointment_ids) {
-        await sql`
-          INSERT INTO public.invoice_items (invoice_id, appointment_id, amount)
-          VALUES (${invoice.id}, ${appointmentId}, 14.00)
+      try {
+        const invoiceResult = await sql<Invoice[]>`
+          INSERT INTO public.invoices (
+            invoice_number, 
+            sending_doctor_id, 
+            receiving_doctor_id, 
+            total_amount, 
+            patient_count,
+            notes,
+            status
+          )
+          VALUES (
+            ${invoiceNumber},
+            ${data.sending_doctor_id},
+            ${data.receiving_doctor_id},
+            ${data.total_amount},
+            ${data.appointment_ids.length},
+            ${data.notes || null},
+            'pending'
+          )
+          RETURNING *
         `;
-      }
+        
+        if (!invoiceResult || invoiceResult.length === 0) {
+          throw new Error('Invoice creation failed - no result returned');
+        }
+        
+        const [invoice] = invoiceResult;
+        console.log('Invoice created successfully:', invoice);
 
-      return invoice;
+        // Create invoice items
+        console.log('Creating invoice items for', data.appointment_ids.length, 'appointments...');
+        for (const appointmentId of data.appointment_ids) {
+          try {
+            await sql`
+              INSERT INTO public.invoice_items (invoice_id, appointment_id, amount)
+              VALUES (${invoice.id}, ${appointmentId}, ${PATIENT_FEE})
+            `;
+            console.log('Invoice item created for appointment:', appointmentId);
+          } catch (itemError) {
+            console.error('Error creating invoice item for appointment', appointmentId, ':', itemError);
+            throw new Error(`Failed to create invoice item for appointment ${appointmentId}: ${itemError}`);
+          }
+        }
+        
+        console.log('All invoice items created successfully');
+        return invoice;
+      } catch (error) {
+        console.error('Error in useCreateInvoice mutationFn:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
+      // Invalidate all invoice-related queries
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["invoices-sending"] });
       queryClient.invalidateQueries({ queryKey: ["invoices-receiving"] });
+      queryClient.invalidateQueries({ queryKey: ["issued-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["examined-patients-for-invoice"] });
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       queryClient.invalidateQueries({ queryKey: ["received-patients"] });
       toast({
@@ -239,25 +263,40 @@ export const useDeleteInvoice = () => {
 
   return useMutation({
     mutationFn: async (invoiceId: string) => {
-      // First delete invoice items (cascading delete)
-      await sql`
-        DELETE FROM public.invoice_items
-        WHERE invoice_id = ${invoiceId}
-      `;
+      console.log('useDeleteInvoice: Starting deletion for invoice:', invoiceId);
       
-      // Then delete the invoice
-      await sql`
-        DELETE FROM public.invoices
-        WHERE id = ${invoiceId}
-      `;
-      
-      return invoiceId;
+      try {
+        // First delete invoice items (cascading delete)
+        console.log('Deleting invoice items...');
+        const itemsResult = await sql`
+          DELETE FROM public.invoice_items
+          WHERE invoice_id = ${invoiceId}
+        `;
+        console.log('Invoice items deleted:', itemsResult);
+        
+        // Then delete the invoice
+        console.log('Deleting invoice...');
+        const invoiceResult = await sql`
+          DELETE FROM public.invoices
+          WHERE id = ${invoiceId}
+        `;
+        console.log('Invoice deleted:', invoiceResult);
+        
+        return invoiceId;
+      } catch (error) {
+        console.error('Error in useDeleteInvoice mutationFn:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
+      // Invalidate all invoice-related queries
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["invoices-sending"] });
       queryClient.invalidateQueries({ queryKey: ["invoices-receiving"] });
+      queryClient.invalidateQueries({ queryKey: ["issued-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["examined-patients-for-invoice"] });
       queryClient.invalidateQueries({ queryKey: ["invoice-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["invoice-items"] });
       toast({
         title: "Faktúra vymazaná",
         description: "Faktúra bola úspešne odstránená",

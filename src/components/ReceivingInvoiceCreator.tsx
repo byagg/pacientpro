@@ -129,24 +129,48 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
   };
 
   const handleCreateInvoice = async (sendingDoctorId: string) => {
+    console.log('Creating invoice for doctor:', sendingDoctorId);
+    console.log('Receiving doctor ID:', receivingDoctorId);
+    
     const patientsForDoctor = patients.filter(
       p => p.angiologist_id === sendingDoctorId && selectedPatients.includes(p.id)
     );
 
-    if (patientsForDoctor.length === 0) return;
+    console.log('Selected patients for doctor:', patientsForDoctor.length);
+    console.log('Patients:', patientsForDoctor);
+
+    if (patientsForDoctor.length === 0) {
+      console.warn('No patients selected for invoice creation');
+      return;
+    }
 
     const totalAmount = patientsForDoctor.length * PATIENT_FEE;
+    const appointmentIds = patientsForDoctor.map(p => p.id);
 
-    await createInvoice.mutateAsync({
+    console.log('Invoice data:', {
       sending_doctor_id: sendingDoctorId,
       receiving_doctor_id: receivingDoctorId,
-      appointment_ids: patientsForDoctor.map(p => p.id),
+      appointment_ids: appointmentIds,
       total_amount: totalAmount,
-      notes: `Manipulačné poplatky za ${patientsForDoctor.length} vyšetrených pacientov`,
     });
 
-    // Clear selection after successful invoice creation
-    setSelectedPatients(prev => prev.filter(id => !patientsForDoctor.map(p => p.id).includes(id)));
+    try {
+      const result = await createInvoice.mutateAsync({
+        sending_doctor_id: sendingDoctorId,
+        receiving_doctor_id: receivingDoctorId,
+        appointment_ids: appointmentIds,
+        total_amount: totalAmount,
+        notes: `Manipulačné poplatky za ${patientsForDoctor.length} vyšetrených pacientov`,
+      });
+
+      console.log('Invoice created successfully:', result);
+
+      // Clear selection after successful invoice creation
+      setSelectedPatients(prev => prev.filter(id => !appointmentIds.includes(id)));
+    } catch (error) {
+      console.error('Error creating invoice:', error);
+      // Error is already handled by the mutation's onError
+    }
   };
 
   const calculateTotal = () => {
