@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FileText, Printer, X } from "lucide-react";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
 import { sql } from "@/integrations/neon/client";
@@ -138,9 +138,35 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="print:hidden">
+    <>
+      <style>{`
+        @media print {
+          @page {
+            size: A4;
+            margin: 1cm;
+          }
+          body * {
+            visibility: hidden;
+          }
+          #invoice-content, #invoice-content * {
+            visibility: visible;
+          }
+          #invoice-content {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+          }
+          .print\\:hidden {
+            display: none !important;
+          }
+        }
+      `}</style>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="print:hidden">
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -155,153 +181,162 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
           </div>
         </DialogHeader>
 
-        {/* Invoice Content */}
-        <div className="space-y-6 p-8 bg-white text-black" id="invoice-content">
+        {/* Invoice Content - Compact for A4 */}
+        <div className="space-y-3 p-6 bg-white text-black print:p-4" id="invoice-content" style={{ fontSize: '11px' }}>
           {/* Header */}
-          <div className="border-b-2 border-gray-300 pb-4">
-            <h1 className="text-3xl font-bold text-gray-900">FAKTÚRA</h1>
-            <p className="text-xl text-gray-600 mt-1">{invoice.invoice_number}</p>
+          <div className="border-b-2 border-gray-300 pb-2 mb-3">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 print:text-xl">FAKTÚRA</h1>
+                <p className="text-sm text-gray-600 mt-0.5 print:text-xs">{invoice.invoice_number}</p>
+              </div>
+            </div>
           </div>
 
-          {/* Supplier and Customer Info */}
-          <div className="grid grid-cols-2 gap-8">
-            {/* Supplier (Receiving Doctor - poskytol službu vyšetrenia) */}
-            <div>
-              <h2 className="text-sm font-semibold text-gray-500 mb-2">DODÁVATEĽ</h2>
-              <div className="space-y-1">
-                <p className="font-bold text-lg">{formatDoctorName(invoice.receiving_doctor_name)}</p>
+          {/* Supplier and Customer Info - Compact */}
+          <div className="grid grid-cols-2 gap-4 mb-3 print:gap-3">
+            {/* Supplier (Receiving Doctor) */}
+            <div className="border-r border-gray-200 pr-4">
+              <h2 className="text-xs font-semibold text-gray-500 mb-1 print:text-[10px]">DODÁVATEĽ</h2>
+              <div className="space-y-0.5 text-xs print:text-[10px]">
+                <p className="font-bold">{formatDoctorName(invoice.receiving_doctor_name)}</p>
                 {invoice.receiving_doctor_address && (
-                  <p className="text-sm text-gray-700">{invoice.receiving_doctor_address}</p>
+                  <p className="text-gray-700 whitespace-pre-line">{invoice.receiving_doctor_address}</p>
                 )}
-                {invoice.receiving_doctor_ico && (
-                  <p className="text-sm text-gray-700">IČO: {invoice.receiving_doctor_ico}</p>
-                )}
-                {invoice.receiving_doctor_dic && (
-                  <p className="text-sm text-gray-700">DIČ: {invoice.receiving_doctor_dic}</p>
+                <div className="flex gap-3 mt-1">
+                  {invoice.receiving_doctor_ico && (
+                    <span className="text-gray-700">IČO: {invoice.receiving_doctor_ico}</span>
+                  )}
+                  {invoice.receiving_doctor_dic && (
+                    <span className="text-gray-700">DIČ: {invoice.receiving_doctor_dic}</span>
+                  )}
+                </div>
+                {invoice.receiving_doctor_bank_account && (
+                  <p className="text-gray-700 mt-1">IBAN: {invoice.receiving_doctor_bank_account}</p>
                 )}
               </div>
             </div>
 
-            {/* Customer (Sending Doctor - platí za službu) */}
-            <div>
-              <h2 className="text-sm font-semibold text-gray-500 mb-2">ODBERATEĽ</h2>
+            {/* Customer (Sending Doctor) */}
+            <div className="pl-4">
+              <h2 className="text-xs font-semibold text-gray-500 mb-1 print:text-[10px]">ODBERATEĽ</h2>
               {!invoice.sending_doctor_name ? (
-                <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-                  <p className="text-sm text-yellow-800 font-semibold">⚠️ Chýbajú údaje odberateľa</p>
-                  <p className="text-xs text-yellow-700 mt-1">
-                    Odosielajúci lekár nevyplnil fakturačné údaje.
-                  </p>
-                </div>
+                <p className="text-xs text-yellow-600">⚠️ Chýbajú údaje</p>
               ) : (
-                <div className="space-y-1">
-                  <p className="font-bold text-lg">{formatDoctorName(invoice.sending_doctor_name)}</p>
+                <div className="space-y-0.5 text-xs print:text-[10px]">
+                  <p className="font-bold">{formatDoctorName(invoice.sending_doctor_name)}</p>
                   {invoice.sending_doctor_address && (
-                    <p className="text-sm text-gray-700">{invoice.sending_doctor_address}</p>
+                    <p className="text-gray-700 whitespace-pre-line">{invoice.sending_doctor_address}</p>
                   )}
-                  {invoice.sending_doctor_ico && (
-                    <p className="text-sm text-gray-700">IČO: {invoice.sending_doctor_ico}</p>
-                  )}
-                  {invoice.sending_doctor_dic && (
-                    <p className="text-sm text-gray-700">DIČ: {invoice.sending_doctor_dic}</p>
-                  )}
-                  {!invoice.sending_doctor_address && !invoice.sending_doctor_ico && !invoice.sending_doctor_dic && (
-                    <p className="text-xs text-yellow-600 mt-1">⚠️ Neúplné fakturačné údaje</p>
+                  <div className="flex gap-3 mt-1">
+                    {invoice.sending_doctor_ico && (
+                      <span className="text-gray-700">IČO: {invoice.sending_doctor_ico}</span>
+                    )}
+                    {invoice.sending_doctor_dic && (
+                      <span className="text-gray-700">DIČ: {invoice.sending_doctor_dic}</span>
+                    )}
+                  </div>
+                  {invoice.sending_doctor_bank_account && (
+                    <p className="text-gray-700 mt-1">IBAN: {invoice.sending_doctor_bank_account}</p>
                   )}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Invoice Details */}
-          <div className="grid grid-cols-3 gap-4 bg-gray-50 p-4 rounded">
-            <div>
-              <p className="text-xs text-gray-500">Dátum vystavenia</p>
-              <p className="font-semibold">
-                {format(new Date(invoice.issue_date), "d. M. yyyy", { locale: sk })}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Počet položiek</p>
-              <p className="font-semibold">{invoice.patient_count} pacientov</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Spôsob úhrady</p>
-              <p className="font-semibold">Bankový prevod</p>
-            </div>
-          </div>
+          {/* Dates - Grouped */}
+          {(() => {
+            const issueDate = new Date(invoice.issue_date);
+            const deliveryDate = items.length > 0 ? new Date(items[items.length - 1].appointment_date) : issueDate;
+            const dueDate = addDays(issueDate, 14);
+            
+            return (
+              <div className="grid grid-cols-3 gap-3 bg-gray-50 p-2 rounded mb-3 print:p-1.5 print:gap-2">
+                <div>
+                  <p className="text-[10px] text-gray-500 print:text-[9px]">Dátum vystavenia</p>
+                  <p className="text-xs font-semibold print:text-[10px]">
+                    {format(issueDate, "d. M. yyyy", { locale: sk })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-500 print:text-[9px]">Dátum dodania</p>
+                  <p className="text-xs font-semibold print:text-[10px]">
+                    {format(deliveryDate, "d. M. yyyy", { locale: sk })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-500 print:text-[9px]">Dátum splatnosti</p>
+                  <p className="text-xs font-semibold print:text-[10px]">
+                    {format(dueDate, "d. M. yyyy", { locale: sk })}
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
 
-          {/* Items Table */}
-          <div>
-            <h2 className="text-sm font-semibold text-gray-700 mb-3">POLOŽKY FAKTÚRY</h2>
-            <table className="w-full border-collapse">
+          {/* Items Table - Compact */}
+          <div className="mb-3">
+            <h2 className="text-xs font-semibold text-gray-700 mb-1.5 print:text-[10px]">POLOŽKY FAKTÚRY</h2>
+            <table className="w-full border-collapse text-xs print:text-[10px]">
               <thead>
                 <tr className="bg-gray-100 border-b border-gray-300">
-                  <th className="text-left p-2 text-sm font-semibold">Číslo pacienta</th>
-                  <th className="text-left p-2 text-sm font-semibold">Dátum vyšetrenia</th>
-                  <th className="text-right p-2 text-sm font-semibold">Suma</th>
+                  <th className="text-left p-1.5 font-semibold print:p-1">Číslo pacienta</th>
+                  <th className="text-left p-1.5 font-semibold print:p-1">Dátum vyšetrenia</th>
+                  <th className="text-right p-1.5 font-semibold print:p-1">Suma</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((item, index) => (
                   <tr key={index} className="border-b border-gray-200">
-                    <td className="p-2 text-sm">{item.patient_number}</td>
-                    <td className="p-2 text-sm">
+                    <td className="p-1.5 print:p-1">{item.patient_number}</td>
+                    <td className="p-1.5 print:p-1">
                       {format(new Date(item.appointment_date), "d. M. yyyy", { locale: sk })}
                     </td>
-                    <td className="p-2 text-sm text-right">{item.amount} €</td>
+                    <td className="p-1.5 text-right print:p-1">{item.amount} €</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          {/* Total */}
-          <div className="flex justify-end">
-            <div className="w-64 space-y-2">
-              <div className="flex justify-between py-2 border-t border-gray-300">
-                <span className="font-semibold">Celkom k úhrade:</span>
-                <span className="text-xl font-bold">{invoice.total_amount} €</span>
+          {/* Total and Payment Details - Compact */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Total */}
+            <div className="flex justify-end">
+              <div className="w-48">
+                <div className="flex justify-between py-1.5 border-t-2 border-gray-400">
+                  <span className="text-sm font-semibold print:text-xs">Celkom k úhrade:</span>
+                  <span className="text-lg font-bold print:text-base">{invoice.total_amount} €</span>
+                </div>
               </div>
             </div>
+
+            {/* Payment Details - Compact */}
+            {invoice.receiving_doctor_bank_account && (
+              <div className="text-xs print:text-[10px]">
+                <p className="font-semibold mb-0.5">Platobné údaje:</p>
+                <p>IBAN: {invoice.receiving_doctor_bank_account}</p>
+                <p>VS: {invoice.invoice_number.replace(/[^0-9]/g, '')}</p>
+              </div>
+            )}
           </div>
 
-          {/* Payment Details */}
-          {invoice.receiving_doctor_bank_account && (
-            <div className="bg-gray-50 p-4 rounded">
-              <h2 className="text-sm font-semibold text-gray-700 mb-2">PLATOBNÉ ÚDAJE</h2>
-              <p className="text-sm">
-                <span className="font-semibold">Číslo účtu (dodávateľa):</span> {invoice.receiving_doctor_bank_account}
-              </p>
-              <p className="text-sm">
-                <span className="font-semibold">Variabilný symbol:</span> {invoice.invoice_number.replace(/[^0-9]/g, '')}
-              </p>
-            </div>
-          )}
-
-          {/* Notes */}
-          {invoice.notes && (
-            <div className="text-sm text-gray-600">
-              <p className="font-semibold">Poznámka:</p>
-              <p>{invoice.notes}</p>
-            </div>
-          )}
-
-          {/* Signature */}
+          {/* Signature - Compact */}
           {invoice.receiving_doctor_signature && (
-            <div className="flex justify-end mt-8 mb-4">
+            <div className="flex justify-end mt-4 mb-2 print:mt-3 print:mb-1">
               <div className="text-center">
                 <img 
                   src={invoice.receiving_doctor_signature} 
                   alt="Podpis" 
-                  className="max-h-16 mb-2 border-b border-gray-400"
+                  className="max-h-12 mb-1 border-b border-gray-400 print:max-h-10"
                 />
-                <p className="text-xs text-gray-600">Podpis dodávateľa</p>
+                <p className="text-[10px] text-gray-600 print:text-[9px]">Podpis dodávateľa</p>
               </div>
             </div>
           )}
 
-          {/* Footer */}
-          <div className="text-xs text-gray-500 text-center pt-4 border-t border-gray-200">
+          {/* Footer - Compact */}
+          <div className="text-[10px] text-gray-500 text-center pt-2 border-t border-gray-200 print:text-[9px] print:pt-1">
             <p>
               {invoice.receiving_doctor_signature 
                 ? "Faktúra bola vystavená elektronicky." 
@@ -311,6 +346,7 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 };
 
