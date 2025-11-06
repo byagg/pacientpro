@@ -251,6 +251,36 @@ CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON public.invoice_items(inv
 CREATE INDEX IF NOT EXISTS idx_invoice_items_appointment ON public.invoice_items(appointment_id);
 
 -- ============================================
+-- Add break times (pauzy) to office_hours
+-- ============================================
+DO $$ 
+BEGIN
+    -- Add break_start_time for lunch/pause start
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'office_hours' 
+        AND column_name = 'break_start_time'
+    ) THEN
+        ALTER TABLE public.office_hours
+        ADD COLUMN break_start_time TIME;
+    END IF;
+
+    -- Add break_end_time for lunch/pause end
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'office_hours' 
+        AND column_name = 'break_end_time'
+    ) THEN
+        ALTER TABLE public.office_hours
+        ADD COLUMN break_end_time TIME;
+    END IF;
+END $$;
+
+-- ============================================
 -- Verification queries (optional - to check if everything worked)
 -- ============================================
 -- SELECT table_name, column_name, data_type 

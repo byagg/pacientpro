@@ -47,6 +47,8 @@ const OfficeHoursSettings = ({ receivingDoctorId }: OfficeHoursSettingsProps) =>
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [slotDuration, setSlotDuration] = useState("30");
+  const [breakStartTime, setBreakStartTime] = useState("");
+  const [breakEndTime, setBreakEndTime] = useState("");
 
   const handleAddSlot = async () => {
     if (!selectedDay || !startTime || !endTime) {
@@ -56,6 +58,28 @@ const OfficeHoursSettings = ({ receivingDoctorId }: OfficeHoursSettingsProps) =>
         description: "Vyplňte všetky povinné polia",
       });
       return;
+    }
+
+    // Validate break times if provided
+    if (breakStartTime || breakEndTime) {
+      if (!breakStartTime || !breakEndTime) {
+        toast({
+          variant: "destructive",
+          title: "Chyba",
+          description: "Ak zadáte pauzu, musíte vyplniť začiatok aj koniec",
+        });
+        return;
+      }
+      
+      // Validate break is within working hours
+      if (breakStartTime < startTime || breakEndTime > endTime || breakStartTime >= breakEndTime) {
+        toast({
+          variant: "destructive",
+          title: "Chyba",
+          description: "Pauza musí byť v rámci pracovných hodín a začiatok musí byť pred koncom",
+        });
+        return;
+      }
     }
 
     // Convert HH:MM to HH:MM:SS format for database
@@ -68,12 +92,16 @@ const OfficeHoursSettings = ({ receivingDoctorId }: OfficeHoursSettingsProps) =>
       start_time: startTimeFormatted,
       end_time: endTimeFormatted,
       slot_duration_minutes: parseInt(slotDuration),
+      break_start_time: breakStartTime || null,
+      break_end_time: breakEndTime || null,
     });
 
     // Reset form
     setSelectedDay("");
     setStartTime("");
     setEndTime("");
+    setBreakStartTime("");
+    setBreakEndTime("");
   };
 
   const handleToggleActive = async (hour: { id: string; receiving_doctor_id: string; is_active: boolean }) => {
@@ -179,6 +207,63 @@ const OfficeHoursSettings = ({ receivingDoctorId }: OfficeHoursSettingsProps) =>
               </Select>
             </div>
           </div>
+          
+          {/* Break times (optional) */}
+          <div className="border-t pt-4">
+            <h4 className="text-sm font-medium mb-3">Pauza (voliteľné)</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="breakStartTime">Začiatok pauzy</Label>
+                <Select 
+                  value={breakStartTime} 
+                  onValueChange={setBreakStartTime}
+                  disabled={!startTime || !endTime}
+                >
+                  <SelectTrigger id="breakStartTime">
+                    <SelectValue placeholder="Vyberte čas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {startTime && endTime ? (
+                      TIME_OPTIONS.filter(time => time > startTime && time < endTime).map((time) => (
+                        <SelectItem key={time} value={time}>
+                          {time}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="" disabled>Najprv vyberte pracovné hodiny</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="breakEndTime">Koniec pauzy</Label>
+                <Select 
+                  value={breakEndTime} 
+                  onValueChange={setBreakEndTime}
+                  disabled={!breakStartTime || !startTime || !endTime}
+                >
+                  <SelectTrigger id="breakEndTime">
+                    <SelectValue placeholder="Vyberte čas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {breakStartTime && startTime && endTime ? (
+                      TIME_OPTIONS.filter(time => time > breakStartTime && time <= endTime).map((time) => (
+                        <SelectItem key={time} value={time}>
+                          {time}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="" disabled>Najprv vyberte začiatok pauzy</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              💡 Pauza sa použije na vylúčenie času z dostupných slotov (napr. obedná pauza)
+            </p>
+          </div>
+
           <Button
             onClick={handleAddSlot}
             disabled={createHour.isPending}
@@ -220,6 +305,11 @@ const OfficeHoursSettings = ({ receivingDoctorId }: OfficeHoursSettingsProps) =>
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Dĺžka slotu: {hour.slot_duration_minutes} minút
+                      {hour.break_start_time && hour.break_end_time && (
+                        <span className="ml-2 text-orange-600">
+                          • Pauza: {hour.break_start_time.substring(0, 5)} - {hour.break_end_time.substring(0, 5)}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

@@ -9,6 +9,8 @@ export interface OfficeHour {
   start_time: string; // HH:MM:SS format
   end_time: string; // HH:MM:SS format
   slot_duration_minutes: number;
+  break_start_time: string | null; // HH:MM:SS format (optional)
+  break_end_time: string | null; // HH:MM:SS format (optional)
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -20,6 +22,8 @@ export interface OfficeHourInsert {
   start_time: string;
   end_time: string;
   slot_duration_minutes?: number;
+  break_start_time?: string | null;
+  break_end_time?: string | null;
   is_active?: boolean;
 }
 
@@ -28,6 +32,8 @@ export interface OfficeHourUpdate {
   start_time?: string;
   end_time?: string;
   slot_duration_minutes?: number;
+  break_start_time?: string | null;
+  break_end_time?: string | null;
   is_active?: boolean;
 }
 
@@ -64,25 +70,57 @@ export const useCreateOfficeHour = () => {
 
   return useMutation({
     mutationFn: async (data: OfficeHourInsert) => {
-      const [hour] = await sql<OfficeHour[]>`
-        INSERT INTO public.office_hours (
-          receiving_doctor_id,
-          day_of_week,
-          start_time,
-          end_time,
-          slot_duration_minutes,
-          is_active
-        )
-        VALUES (
-          ${data.receiving_doctor_id},
-          ${data.day_of_week},
-          ${data.start_time}::time,
-          ${data.end_time}::time,
-          ${data.slot_duration_minutes ?? 30},
-          ${data.is_active ?? true}
-        )
-        RETURNING *
-      `;
+      const breakStartTime = data.break_start_time ? `${data.break_start_time}:00` : null;
+      const breakEndTime = data.break_end_time ? `${data.break_end_time}:00` : null;
+      
+      // Use conditional SQL for nullable break times
+      const [hour] = breakStartTime && breakEndTime
+        ? await sql<OfficeHour[]>`
+            INSERT INTO public.office_hours (
+              receiving_doctor_id,
+              day_of_week,
+              start_time,
+              end_time,
+              slot_duration_minutes,
+              break_start_time,
+              break_end_time,
+              is_active
+            )
+            VALUES (
+              ${data.receiving_doctor_id},
+              ${data.day_of_week},
+              ${data.start_time}::time,
+              ${data.end_time}::time,
+              ${data.slot_duration_minutes ?? 30},
+              ${breakStartTime}::time,
+              ${breakEndTime}::time,
+              ${data.is_active ?? true}
+            )
+            RETURNING *
+          `
+        : await sql<OfficeHour[]>`
+            INSERT INTO public.office_hours (
+              receiving_doctor_id,
+              day_of_week,
+              start_time,
+              end_time,
+              slot_duration_minutes,
+              break_start_time,
+              break_end_time,
+              is_active
+            )
+            VALUES (
+              ${data.receiving_doctor_id},
+              ${data.day_of_week},
+              ${data.start_time}::time,
+              ${data.end_time}::time,
+              ${data.slot_duration_minutes ?? 30},
+              NULL,
+              NULL,
+              ${data.is_active ?? true}
+            )
+            RETURNING *
+          `;
       return hour;
     },
     onSuccess: (_, variables) => {
@@ -109,22 +147,65 @@ export const useUpdateOfficeHour = () => {
 
   return useMutation({
     mutationFn: async (data: OfficeHourUpdate) => {
-      // For now, we only use this for toggling is_active
-      // Other updates can be added later if needed
+      // Build dynamic UPDATE query based on provided fields
+      const updates: string[] = [];
+      const values: any[] = [];
+      let paramIndex = 1;
+
       if (data.is_active !== undefined) {
-        const [hour] = await sql<OfficeHour[]>`
-          UPDATE public.office_hours
-          SET 
-            is_active = ${data.is_active},
-            updated_at = now()
-          WHERE id = ${data.id}
-          RETURNING *
-        `;
-        return hour;
+        updates.push(`is_active = $${paramIndex}`);
+        values.push(data.is_active);
+        paramIndex++;
       }
       
-      // If other fields need to be updated, handle them separately
-      throw new Error('Only is_active can be updated via this hook');
+      if (data.start_time !== undefined) {
+        updates.push(`start_time = $${paramIndex}::time`);
+        values.push(data.start_time);
+        paramIndex++;
+      }
+      
+      if (data.end_time !== undefined) {
+        updates.push(`end_time = $${paramIndex}::time`);
+        values.push(data.end_time);
+        paramIndex++;
+      }
+      
+      if (data.slot_duration_minutes !== undefined) {
+        updates.push(`slot_duration_minutes = $${paramIndex}`);
+        values.push(data.slot_duration_minutes);
+        paramIndex++;
+      }
+      
+      if (data.break_start_time !== undefined) {
+        const breakStartTime = data.break_start_time ? `${data.break_start_time}:00` : null;
+        updates.push(`break_start_time = $${paramIndex}::time`);
+        values.push(breakStartTime);
+        paramIndex++;
+      }
+      
+      if (data.break_end_time !== undefined) {
+        const breakEndTime = data.break_end_time ? `${data.break_end_time}:00` : null;
+        updates.push(`break_end_time = $${paramIndex}::time`);
+        values.push(breakEndTime);
+        paramIndex++;
+      }
+
+      if (updates.length === 0) {
+        throw new Error('No fields to update');
+      }
+
+      updates.push(`updated_at = now()`);
+      values.push(data.id);
+
+      const query = `
+        UPDATE public.office_hours
+        SET ${updates.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `;
+
+      const result = await sql.unsafe(query, values);
+      return result[0] as OfficeHour;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["office-hours", data.receiving_doctor_id] });

@@ -9,6 +9,8 @@ export interface AvailableSlot {
   start_time: string;
   end_time: string;
   slot_duration_minutes: number;
+  break_start_time: string | null;
+  break_end_time: string | null;
   is_active: boolean;
 }
 
@@ -26,6 +28,8 @@ export const useAvailableSlots = () => {
             oh.start_time,
             oh.end_time,
             oh.slot_duration_minutes,
+            oh.break_start_time,
+            oh.break_end_time,
             oh.is_active
           FROM public.office_hours oh
           JOIN public.profiles p ON oh.receiving_doctor_id = p.id
@@ -64,8 +68,27 @@ export const generateTimeSlotsForDate = (
     const startTimeMinutes = startHour * 60 + startMinute;
     const endTimeMinutes = endHour * 60 + endMinute;
 
+    // Calculate break time in minutes if break exists
+    let breakStartMinutes = null;
+    let breakEndMinutes = null;
+    if (oh.break_start_time && oh.break_end_time) {
+      const [breakStartHour, breakStartMin] = oh.break_start_time.split(':').map(Number);
+      const [breakEndHour, breakEndMin] = oh.break_end_time.split(':').map(Number);
+      breakStartMinutes = breakStartHour * 60 + breakStartMin;
+      breakEndMinutes = breakEndHour * 60 + breakEndMin;
+    }
+
     // Generate slots based on slot_duration_minutes
     for (let currentMinutes = startTimeMinutes; currentMinutes < endTimeMinutes; currentMinutes += oh.slot_duration_minutes) {
+      // Skip slots that overlap with break time
+      if (breakStartMinutes !== null && breakEndMinutes !== null) {
+        const slotEndMinutes = currentMinutes + oh.slot_duration_minutes;
+        // Skip if slot overlaps with break (slot starts before break ends and ends after break starts)
+        if (currentMinutes < breakEndMinutes && slotEndMinutes > breakStartMinutes) {
+          continue;
+        }
+      }
+
       const slotHour = Math.floor(currentMinutes / 60);
       const slotMinute = currentMinutes % 60;
 
