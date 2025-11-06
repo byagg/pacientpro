@@ -143,7 +143,7 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
         @media print {
           @page {
             size: A4;
-            margin: 1cm;
+            margin: 0.8cm;
           }
           body * {
             visibility: hidden;
@@ -156,8 +156,26 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
             left: 0;
             top: 0;
             width: 100%;
-            padding: 0;
-            margin: 0;
+            padding: 0 !important;
+            margin: 0 !important;
+            font-size: 9px !important;
+            line-height: 1.2 !important;
+          }
+          #invoice-content h1 {
+            font-size: 16px !important;
+            margin-bottom: 4px !important;
+          }
+          #invoice-content h2 {
+            font-size: 9px !important;
+            margin-bottom: 2px !important;
+          }
+          #invoice-content table {
+            font-size: 9px !important;
+            margin-bottom: 4px !important;
+          }
+          #invoice-content table th,
+          #invoice-content table td {
+            padding: 2px 4px !important;
           }
           .print\\:hidden {
             display: none !important;
@@ -182,28 +200,28 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
         </DialogHeader>
 
         {/* Invoice Content - Compact for A4 */}
-        <div className="space-y-3 p-6 bg-white text-black print:p-4" id="invoice-content" style={{ fontSize: '11px' }}>
+        <div className="space-y-2 p-4 bg-white text-black print:p-3 print:space-y-1" id="invoice-content" style={{ fontSize: '10px' }}>
           {/* Header */}
-          <div className="border-b-2 border-gray-300 pb-2 mb-3">
+          <div className="border-b-2 border-gray-300 pb-1.5 mb-2 print:pb-1 print:mb-1">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 print:text-xl">FAKTÚRA</h1>
-                <p className="text-sm text-gray-600 mt-0.5 print:text-xs">{invoice.invoice_number}</p>
+                <h1 className="text-xl font-bold text-gray-900 print:text-lg">FAKTÚRA</h1>
+                <p className="text-xs text-gray-600 mt-0.5 print:text-[10px]">{invoice.invoice_number}</p>
               </div>
             </div>
           </div>
 
           {/* Supplier and Customer Info - Compact */}
-          <div className="grid grid-cols-2 gap-4 mb-3 print:gap-3">
+          <div className="grid grid-cols-2 gap-3 mb-2 print:gap-2 print:mb-1">
             {/* Supplier (Receiving Doctor) */}
-            <div className="border-r border-gray-200 pr-4">
-              <h2 className="text-xs font-semibold text-gray-500 mb-1 print:text-[10px]">DODÁVATEĽ</h2>
-              <div className="space-y-0.5 text-xs print:text-[10px]">
+            <div className="border-r border-gray-200 pr-3 print:pr-2">
+              <h2 className="text-[10px] font-semibold text-gray-500 mb-0.5 print:text-[9px]">DODÁVATEĽ</h2>
+              <div className="space-y-0 text-[10px] print:text-[9px] leading-tight">
                 <p className="font-bold">{formatDoctorName(invoice.receiving_doctor_name)}</p>
                 {invoice.receiving_doctor_address && (
-                  <p className="text-gray-700 whitespace-pre-line">{invoice.receiving_doctor_address}</p>
+                  <p className="text-gray-700 whitespace-pre-line leading-tight">{invoice.receiving_doctor_address}</p>
                 )}
-                <div className="flex gap-3 mt-1">
+                <div className="flex gap-2 mt-0.5 print:gap-1">
                   {invoice.receiving_doctor_ico && (
                     <span className="text-gray-700">IČO: {invoice.receiving_doctor_ico}</span>
                   )}
@@ -211,24 +229,21 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
                     <span className="text-gray-700">DIČ: {invoice.receiving_doctor_dic}</span>
                   )}
                 </div>
-                {invoice.receiving_doctor_bank_account && (
-                  <p className="text-gray-700 mt-1">IBAN: {invoice.receiving_doctor_bank_account}</p>
-                )}
               </div>
             </div>
 
             {/* Customer (Sending Doctor) */}
-            <div className="pl-4">
-              <h2 className="text-xs font-semibold text-gray-500 mb-1 print:text-[10px]">ODBERATEĽ</h2>
+            <div className="pl-3 print:pl-2">
+              <h2 className="text-[10px] font-semibold text-gray-500 mb-0.5 print:text-[9px]">ODBERATEĽ</h2>
               {!invoice.sending_doctor_name ? (
-                <p className="text-xs text-yellow-600">⚠️ Chýbajú údaje</p>
+                <p className="text-[10px] text-yellow-600 print:text-[9px]">⚠️ Chýbajú údaje</p>
               ) : (
-                <div className="space-y-0.5 text-xs print:text-[10px]">
+                <div className="space-y-0 text-[10px] print:text-[9px] leading-tight">
                   <p className="font-bold">{formatDoctorName(invoice.sending_doctor_name)}</p>
                   {invoice.sending_doctor_address && (
-                    <p className="text-gray-700 whitespace-pre-line">{invoice.sending_doctor_address}</p>
+                    <p className="text-gray-700 whitespace-pre-line leading-tight">{invoice.sending_doctor_address}</p>
                   )}
-                  <div className="flex gap-3 mt-1">
+                  <div className="flex gap-2 mt-0.5 print:gap-1">
                     {invoice.sending_doctor_ico && (
                       <span className="text-gray-700">IČO: {invoice.sending_doctor_ico}</span>
                     )}
@@ -236,9 +251,6 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
                       <span className="text-gray-700">DIČ: {invoice.sending_doctor_dic}</span>
                     )}
                   </div>
-                  {invoice.sending_doctor_bank_account && (
-                    <p className="text-gray-700 mt-1">IBAN: {invoice.sending_doctor_bank_account}</p>
-                  )}
                 </div>
               )}
             </div>
@@ -251,22 +263,22 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
             const dueDate = addDays(issueDate, 14);
             
             return (
-              <div className="grid grid-cols-3 gap-3 bg-gray-50 p-2 rounded mb-3 print:p-1.5 print:gap-2">
+              <div className="grid grid-cols-3 gap-2 bg-gray-50 p-1.5 rounded mb-2 print:p-1 print:gap-1 print:mb-1">
                 <div>
-                  <p className="text-[10px] text-gray-500 print:text-[9px]">Dátum vystavenia</p>
-                  <p className="text-xs font-semibold print:text-[10px]">
+                  <p className="text-[9px] text-gray-500 print:text-[8px]">Dátum vystavenia</p>
+                  <p className="text-[10px] font-semibold print:text-[9px]">
                     {format(issueDate, "d. M. yyyy", { locale: sk })}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-gray-500 print:text-[9px]">Dátum dodania</p>
-                  <p className="text-xs font-semibold print:text-[10px]">
+                  <p className="text-[9px] text-gray-500 print:text-[8px]">Dátum dodania</p>
+                  <p className="text-[10px] font-semibold print:text-[9px]">
                     {format(deliveryDate, "d. M. yyyy", { locale: sk })}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-gray-500 print:text-[9px]">Dátum splatnosti</p>
-                  <p className="text-xs font-semibold print:text-[10px]">
+                  <p className="text-[9px] text-gray-500 print:text-[8px]">Dátum splatnosti</p>
+                  <p className="text-[10px] font-semibold print:text-[9px]">
                     {format(dueDate, "d. M. yyyy", { locale: sk })}
                   </p>
                 </div>
@@ -275,68 +287,56 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
           })()}
 
           {/* Items Table - Compact */}
-          <div className="mb-3">
-            <h2 className="text-xs font-semibold text-gray-700 mb-1.5 print:text-[10px]">POLOŽKY FAKTÚRY</h2>
-            <table className="w-full border-collapse text-xs print:text-[10px]">
+          <div className="mb-2 print:mb-1">
+            <h2 className="text-[10px] font-semibold text-gray-700 mb-1 print:text-[9px] print:mb-0.5">POLOŽKY FAKTÚRY</h2>
+            <table className="w-full border-collapse text-[10px] print:text-[9px]">
               <thead>
                 <tr className="bg-gray-100 border-b border-gray-300">
-                  <th className="text-left p-1.5 font-semibold print:p-1">Číslo pacienta</th>
-                  <th className="text-left p-1.5 font-semibold print:p-1">Dátum vyšetrenia</th>
-                  <th className="text-right p-1.5 font-semibold print:p-1">Suma</th>
+                  <th className="text-left p-1 font-semibold print:p-0.5">Číslo pacienta</th>
+                  <th className="text-left p-1 font-semibold print:p-0.5">Dátum vyšetrenia</th>
+                  <th className="text-right p-1 font-semibold print:p-0.5">Suma</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((item, index) => (
                   <tr key={index} className="border-b border-gray-200">
-                    <td className="p-1.5 print:p-1">{item.patient_number}</td>
-                    <td className="p-1.5 print:p-1">
+                    <td className="p-1 print:p-0.5">{item.patient_number}</td>
+                    <td className="p-1 print:p-0.5">
                       {format(new Date(item.appointment_date), "d. M. yyyy", { locale: sk })}
                     </td>
-                    <td className="p-1.5 text-right print:p-1">{item.amount} €</td>
+                    <td className="p-1 text-right print:p-0.5">{item.amount} €</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          {/* Total and Payment Details - Compact */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Total */}
-            <div className="flex justify-end">
-              <div className="w-48">
-                <div className="flex justify-between py-1.5 border-t-2 border-gray-400">
-                  <span className="text-sm font-semibold print:text-xs">Celkom k úhrade:</span>
-                  <span className="text-lg font-bold print:text-base">{invoice.total_amount} €</span>
-                </div>
+          {/* Total - Compact */}
+          <div className="flex justify-end mb-2 print:mb-1">
+            <div className="w-48 print:w-40">
+              <div className="flex justify-between py-1 border-t-2 border-gray-400 print:py-0.5">
+                <span className="text-xs font-semibold print:text-[10px]">Celkom k úhrade:</span>
+                <span className="text-base font-bold print:text-sm">{invoice.total_amount} €</span>
               </div>
             </div>
-
-            {/* Payment Details - Compact */}
-            {invoice.receiving_doctor_bank_account && (
-              <div className="text-xs print:text-[10px]">
-                <p className="font-semibold mb-0.5">Platobné údaje:</p>
-                <p>IBAN: {invoice.receiving_doctor_bank_account}</p>
-                <p>VS: {invoice.invoice_number.replace(/[^0-9]/g, '')}</p>
-              </div>
-            )}
           </div>
 
           {/* Signature - Compact */}
           {invoice.receiving_doctor_signature && (
-            <div className="flex justify-end mt-4 mb-2 print:mt-3 print:mb-1">
+            <div className="flex justify-end mt-2 mb-1 print:mt-1.5 print:mb-0.5">
               <div className="text-center">
                 <img 
                   src={invoice.receiving_doctor_signature} 
                   alt="Podpis" 
-                  className="max-h-12 mb-1 border-b border-gray-400 print:max-h-10"
+                  className="max-h-10 mb-0.5 border-b border-gray-400 print:max-h-8"
                 />
-                <p className="text-[10px] text-gray-600 print:text-[9px]">Podpis dodávateľa</p>
+                <p className="text-[9px] text-gray-600 print:text-[8px]">Podpis dodávateľa</p>
               </div>
             </div>
           )}
 
           {/* Footer - Compact */}
-          <div className="text-[10px] text-gray-500 text-center pt-2 border-t border-gray-200 print:text-[9px] print:pt-1">
+          <div className="text-[9px] text-gray-500 text-center pt-1 border-t border-gray-200 print:text-[8px] print:pt-0.5">
             <p>
               {invoice.receiving_doctor_signature 
                 ? "Faktúra bola vystavená elektronicky." 
