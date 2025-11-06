@@ -21,13 +21,23 @@ const Index = () => {
             Profesionálny systém pre správu rezervácií a manipulačných poplatkov angiológov
             v súlade s GDPR
           </p>
-          <Button
-            size="lg"
-            onClick={() => navigate("/auth")}
-            className="shadow-elegant"
-          >
-            Prihlásiť sa
-          </Button>
+          <div className="space-x-4">
+            <Button
+              size="lg"
+              onClick={() => navigate("/auth")}
+              className="shadow-elegant"
+            >
+              Prihlásiť sa
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => navigate("/django-demo")}
+              className="shadow-elegant"
+            >
+              Django Demo
+            </Button>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
