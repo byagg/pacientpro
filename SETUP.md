@@ -1,58 +1,57 @@
 # ANGIOPLUS - Setup Guide
 
-## 1. Nastavenie databázy
+## 🎉 Aplikácia je napojená na Supabase
 
-### Ako získať Neon Database URL:
+ANGIOPLUS teraz používa Supabase ako backend database a autentifikačný systém.
 
-1. Otvorte [Neon Console](https://console.neon.tech/)
-2. Vyberte váš projekt
-3. Kliknite na "Connection Details" alebo "Connection String"
-4. Skopírujte connection string
+## 1. Supabase Credentials
 
-### Formát connection stringu:
-```
-postgresql://[user]:[password]@[host]/[database]?sslmode=require
-```
+Supabase údaje sú už nakonfigurované v aplikácii:
+- **URL**: https://rmvflqzxxbzhilobyitw.supabase.co
+- **Anon Key**: (už nastavený v kóde)
 
-## 2. Nastavenie environment variables
+Pre viac informácií o Supabase konfigurácii, pozrite `SUPABASE_SETUP.md`.
 
-### Vytvorte `.env` súbor v root priečinku projektu:
+## 2. Spustenie aplikácie
 
 ```bash
-cp .env.example .env
-```
-
-### Upravte `.env` súbor a vložte váš Neon connection string:
-
-```env
-VITE_DATABASE_URL=postgresql://your-user:your-password@your-host.neon.tech/your-database?sslmode=require
-```
-
-## 3. Spustenie aplikácie
-
-```bash
+# Nainštalujte dependencies
 npm install
+
+# Spustite dev server
 npm run dev
 ```
 
-Aplikácia bude dostupná na `http://localhost:8080`
+Aplikácia bude dostupná na `http://localhost:5173`
 
-## 4. Overenie, že databáza funguje
+## 3. Overenie, že databáza funguje
 
 Po spustení aplikácie:
 1. Otvorte `/auth` stránku
 2. Zaregistrujte sa s novým účtom
-3. Ak sa registrácia podarí, databáza funguje správne!
+3. Prihláste sa
+4. Ak registrácia a prihlásenie fungujú, Supabase je správne napojený!
+
+## 4. Databázové migrácie
+
+Migrácie sú uložené v `supabase/migrations/`. Pre aplikáciu:
+1. Otvorte [Supabase Dashboard](https://rmvflqzxxbzhilobyitw.supabase.co)
+2. Prejdite do SQL Editor
+3. Spustite migrácie zo súborov v `supabase/migrations/`
 
 ## Troubleshooting
 
-### Chyba: "Missing DATABASE_URL environment variable"
-- Skontrolujte, či máte `.env` súbor v root priečinku
-- Skontrolujte, či je `VITE_DATABASE_URL` správne nastavený
-- Po zmene `.env` reštartujte dev server
+### Chyba pri autentifikácii
+- Skontrolujte Supabase Dashboard → Authentication → Policies
+- Uistite sa, že sú povolené email registrácie
 
-### Chyba pri pripojení k databáze
-- Skontrolujte, či je connection string správny
+### Chyba pri databázových dotazoch
+- Skontrolujte Supabase Dashboard → Logs
+- Skontrolujte Row Level Security (RLS) pravidlá
+- Uistite sa, že ste spustili všetky migrácie
+
+### Problém s pripojením
 - Skontrolujte, či máte internetové pripojenie
-- Skontrolujte, či je Neon databáza aktívna
+- Skontrolujte, či je Supabase projekt aktívny
+- Skontrolujte browser konzolu pre detailné chyby
 

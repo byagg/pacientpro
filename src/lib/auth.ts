@@ -1,5 +1,5 @@
-// Custom authentication system using Neon database
-import { sql } from "@/integrations/neon/client";
+// Authentication system using Supabase
+import { supabase } from "@/integrations/supabase/client";
 
 export interface User {
   id: string;
@@ -7,6 +7,7 @@ export interface User {
   full_name: string;
   created_at: string;
   user_type?: 'sending' | 'receiving'; // odosielajúci lekár / prijímajúci lekár
+  ambulance_code?: string;
 }
 
 export interface Session {
@@ -14,50 +15,8 @@ export interface Session {
   token: string;
 }
 
-// Hash password using Web Crypto API
-async function hashPassword(password: string): Promise<string> {
-  // Check if crypto.subtle is available (requires secure context: HTTPS or localhost)
-  if (!crypto.subtle) {
-    const currentUrl = window.location.href;
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const errorMsg = isLocalhost
-      ? 'Web Crypto API nie je dostupná. Skontrolujte nastavenia prehliadača.'
-      : `Web Crypto API vyžaduje bezpečný kontext (HTTPS alebo localhost).\n` +
-        `Aktuálne pristupujete cez: ${currentUrl}\n` +
-        `Prosím, použite: http://localhost:8080${window.location.pathname}`;
-    throw new Error(errorMsg);
-  }
-
-  try {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hash = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(hash))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-  } catch (error) {
-    console.error('Error hashing password:', error);
-    throw new Error('Chyba pri hashovaní hesla. Skontrolujte, či používate HTTPS alebo localhost.');
-  }
-}
-
-// Simple session management with localStorage
-const SESSION_KEY = 'angiplus_session';
-
 export const auth = {
   async signUp(email: string, password: string, fullName: string, userType?: 'sending' | 'receiving'): Promise<Session> {
-    // Check if user already exists
-    const existing = await sql`
-      SELECT id FROM profiles WHERE email = ${email}
-    `;
-    if (existing.length > 0) {
-      throw new Error('Tento email je už registrovaný');
-    }
-
-    // Hash password
-    const hashedPassword = await hashPassword(password);
-    const userId = crypto.randomUUID();
-
     // Generate ambulance code from initials
     const names = fullName.trim().split(/\s+/);
     let baseCode = '';
@@ -75,11 +34,13 @@ export const auth = {
     let suffix = 1;
     
     while (true) {
-      const existing = await sql`
-        SELECT id FROM profiles WHERE ambulance_code = ${ambulanceCode}
-      `;
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('ambulance_code', ambulanceCode)
+        .single();
       
-      if (existing.length === 0) {
+      if (!existing) {
         // Code is unique, use it
         break;
       }
@@ -89,88 +50,128 @@ export const auth = {
       ambulanceCode = `${baseCode}${suffix}`;
     }
 
-    // Insert user into database
-    const [user] = await sql`
-      INSERT INTO profiles (id, email, full_name, password_hash, user_type, ambulance_code)
-      VALUES (${userId}, ${email}, ${fullName}, ${hashedPassword}, ${userType || null}, ${ambulanceCode})
-      RETURNING id, email, full_name, created_at, user_type, ambulance_code
-    `;
+    // Sign up with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          user_type: userType,
+          ambulance_code: ambulanceCode,
+        }
+      }
+    });
 
-    // Create session
-    const token = crypto.randomUUID();
+    if (authError) {
+      throw new Error(authError.message);
+    }
+
+    if (!authData.user) {
+      throw new Error('Registrácia zlyhala');
+    }
+
+    // Create or update profile
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert({
+        id: authData.user.id,
+        email: authData.user.email!,
+        full_name: fullName,
+        user_type: userType,
+        ambulance_code: ambulanceCode,
+        created_at: new Date().toISOString(),
+      });
+
+    if (profileError) {
+      console.error('Profile creation error:', profileError);
+    }
+
+    // Return session
     const session: Session = {
       user: {
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        created_at: user.created_at,
+        id: authData.user.id,
+        email: authData.user.email!,
+        full_name: fullName,
+        created_at: authData.user.created_at,
         user_type: userType,
+        ambulance_code: ambulanceCode,
       },
-      token,
+      token: authData.session?.access_token || '',
     };
 
-    // Store session
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     return session;
   },
 
   async signIn(email: string, password: string): Promise<Session> {
-    // Get user from database
-    const users = await sql`
-      SELECT id, email, full_name, created_at, password_hash, user_type
-      FROM profiles
-      WHERE email = ${email}
-    `;
+    // Sign in with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    const user = users[0];
-    if (!user || !user.password_hash) {
+    if (authError) {
       throw new Error('Nesprávny email alebo heslo');
     }
 
-    // Verify password
-    const hashedPassword = await hashPassword(password);
-    if (hashedPassword !== user.password_hash) {
-      throw new Error('Nesprávny email alebo heslo');
+    if (!authData.user || !authData.session) {
+      throw new Error('Prihlásenie zlyhalo');
     }
 
-    // SECURITY FIX: Never allow changing user_type from login form
-    // This would allow privilege escalation attacks
-    // user_type is ALWAYS taken from database and set only during registration
+    // Get user profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single();
 
-    // Create session
-    const token = crypto.randomUUID();
+    // Return session
     const session: Session = {
       user: {
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        created_at: user.created_at,
-        user_type: user.user_type, // ALWAYS from database, never from user input
+        id: authData.user.id,
+        email: authData.user.email!,
+        full_name: profile?.full_name || authData.user.email!,
+        created_at: authData.user.created_at,
+        user_type: profile?.user_type,
+        ambulance_code: profile?.ambulance_code,
       },
-      token,
+      token: authData.session.access_token,
     };
 
-    // Store session
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     return session;
   },
 
-  signOut(): void {
-    localStorage.removeItem(SESSION_KEY);
+  async signOut(): Promise<void> {
+    await supabase.auth.signOut();
   },
 
-  getSession(): Session | null {
-    const sessionStr = localStorage.getItem(SESSION_KEY);
-    if (!sessionStr) return null;
-    try {
-      return JSON.parse(sessionStr);
-    } catch {
-      return null;
-    }
+  async getSession(): Promise<Session | null> {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) return null;
+
+    // Get user profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+
+    return {
+      user: {
+        id: session.user.id,
+        email: session.user.email!,
+        full_name: profile?.full_name || session.user.email!,
+        created_at: session.user.created_at,
+        user_type: profile?.user_type,
+        ambulance_code: profile?.ambulance_code,
+      },
+      token: session.access_token,
+    };
   },
 
-  getCurrentUser(): User | null {
-    const session = this.getSession();
+  async getCurrentUser(): Promise<User | null> {
+    const session = await this.getSession();
     return session?.user || null;
   },
 };

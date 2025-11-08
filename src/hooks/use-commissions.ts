@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { sql } from "@/integrations/neon/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export interface Commission {
@@ -18,13 +18,18 @@ export const useCommissions = (userId: string) => {
     queryFn: async () => {
       if (!userId) return [];
       
-      const data = await sql`
-        SELECT * FROM public.commissions
-        WHERE angiologist_id = ${userId}
-        ORDER BY created_at DESC
-      `;
+      const { data, error } = await supabase
+        .from('commissions')
+        .select('*')
+        .eq('angiologist_id', userId)
+        .order('created_at', { ascending: false });
 
-      return (data as Commission[]) || [];
+      if (error) {
+        console.error('Error fetching commissions:', error);
+        throw error;
+      }
+
+      return (data || []) as Commission[];
     },
     enabled: !!userId,
   });
@@ -37,15 +42,22 @@ export const useMarkCommissionPaid = () => {
 
   return useMutation({
     mutationFn: async ({ commissionId, paidAt }: { commissionId: string; paidAt: string }) => {
-      const [commission] = await sql<Commission[]>`
-        UPDATE public.commissions
-        SET 
-          status = 'paid',
-          paid_at = ${paidAt}::timestamptz
-        WHERE id = ${commissionId}
-        RETURNING *
-      `;
-      return commission;
+      const { data, error } = await supabase
+        .from('commissions')
+        .update({
+          status: 'paid',
+          paid_at: paidAt,
+        })
+        .eq('id', commissionId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error marking commission as paid:', error);
+        throw error;
+      }
+
+      return data as Commission;
     },
     onSuccess: (data) => {
       // Invalidate ALL related queries to ensure synchronization

@@ -1,73 +1,191 @@
-# Welcome to your Lovable project
+# ANGIOPLUS - Systém pre správu rezervácií angiológov
 
-## Project info
+Profesionálny systém pre správu rezervácií a manipulačných poplatkov angiológov v súlade s GDPR.
 
-**URL**: https://lovable.dev/projects/f8a6a0fc-f2a0-4c3c-bd09-b9bb6b2dde9c
+## 🎉 Supabase Backend
 
-## How can I edit this code?
+Aplikácia používa **Supabase** ako backend database a autentifikačný systém.
 
-There are several ways of editing your application.
+- **Database**: PostgreSQL cez Supabase
+- **Auth**: Supabase Auth (JWT tokens)
+- **Security**: Row Level Security (RLS)
 
-**Use Lovable**
+## 🚀 Rýchly Štart
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/f8a6a0fc-f2a0-4c3c-bd09-b9bb6b2dde9c) and start prompting.
+```bash
+# Nainštalujte dependencies
+npm install
 
-Changes made via Lovable will be committed automatically to this repo.
+# Spustite dev server
+npm run dev
 
-**Use your preferred IDE**
+# Otvorte http://localhost:5173
+```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 📋 Funkcie
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Pre odosielajúcich lekárov
+- ✅ Vytváranie rezervácií pacientov
+- ✅ Sledovanie odoslaných pacientov
+- ✅ Prehľad manipulačných poplatkov
+- ✅ Správa faktúr
 
-Follow these steps:
+### Pre prijímajúcich lekárov
+- ✅ Nastavenie ordinačných hodín
+- ✅ Prijímanie pacientov
+- ✅ Označovanie vyšetrených pacientov
+- ✅ Vystavovanie faktúr
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Všeobecné
+- ✅ Moderná responzívna UI (shadcn/ui)
+- ✅ Bezpečná autentifikácia
+- ✅ GDPR compliant (len čísla pacientov)
+- ✅ Fakturácia s PDF preview
+- ✅ Real-time aktualizácie
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## 📁 Štruktúra Projektu
 
-# Step 3: Install the necessary dependencies.
-npm i
+```
+angi-booking-plus-1/
+├── src/
+│   ├── components/       # React komponenty
+│   ├── hooks/           # Custom hooks pre API
+│   ├── integrations/    
+│   │   └── supabase/    # Supabase client
+│   ├── lib/             # Utility funkcie
+│   ├── pages/           # Stránky aplikácie
+│   └── main.tsx         # Entry point
+├── supabase/
+│   └── migrations/      # Database migrácie
+└── public/              # Statické súbory
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+## 🗄️ Databáza
+
+### Tabuľky
+
+- `profiles` - Používateľské profily (lekári)
+- `appointments` - Rezervácie pacientov
+- `commissions` - Manipulačné poplatky
+- `invoices` - Faktúry
+- `invoice_items` - Položky faktúr
+- `office_hours` - Ordinačné hodiny
+
+### Migrácie
+
+Migrácie sú v `supabase/migrations/`. Pre aplikáciu:
+1. Otvorte [Supabase Dashboard](https://rmvflqzxxbzhilobyitw.supabase.co)
+2. Prejdite do SQL Editor
+3. Spustite migrácie zo súborov v poradí
+
+## 🔐 Autentifikácia
+
+- **Registrácia**: Email + heslo
+- **Prihlásenie**: Email + heslo
+- **Session**: Automaticky spravované Supabase
+- **Tokeny**: JWT tokens s automatickým refresh
+
+## 🛠️ Technológie
+
+### Frontend
+- **React 18** - UI framework
+- **TypeScript** - Type safety
+- **Vite** - Build tool
+- **TanStack Query** - Data fetching
+- **shadcn/ui** - UI komponenty
+- **Tailwind CSS** - Styling
+
+### Backend
+- **Supabase** - Backend as a Service
+- **PostgreSQL** - Database
+- **Supabase Auth** - Autentifikácia
+- **Row Level Security** - Bezpečnosť
+
+## 📝 Dokumentácia
+
+- [`SETUP.md`](SETUP.md) - Setup inštrukcie
+- [`SUPABASE_SETUP.md`](SUPABASE_SETUP.md) - Supabase konfigurácia
+- [`MIGRATION_COMPLETE.md`](MIGRATION_COMPLETE.md) - História migrácie
+
+## 🧪 Testovanie
+
+```bash
+# Build aplikácie
+npm run build
+
+# Preview production build
+npm run preview
+
+# Lint kódu
+npm run lint
+```
+
+## 🔒 Bezpečnosť
+
+### GDPR Compliance
+- Používanie len čísel pacientov (bez mien)
+- Žiadne citlivé zdravotné údaje
+- Bezpečné uloženie v Supabase
+
+### Row Level Security (RLS)
+Supabase RLS politiky zabezpečujú, že:
+- Lekári vidia len svoje dáta
+- Faktúry sú prístupné len príslušným stranám
+- Ordinačné hodiny sú verejné (pre rezervácie)
+
+## 📊 Fakturácia
+
+- **Manipulačný poplatok**: 14.00 EUR / pacient
+- **Faktúry**: Automatické generovanie
+- **PDF Preview**: Náhľad pred tlačou
+- **Tracking**: Sledovanie uhradených faktúr
+
+## 🚧 Ďalší Vývoj
+
+### Plánované funkcie
+- [ ] Email notifikácie
+- [ ] Export faktúr do PDF
+- [ ] Štatistiky a reporty
+- [ ] Mobilná aplikácia
+- [ ] Integrácia s Google Calendar
+
+## 💻 Vývoj
+
+### Pre začiatok
+```bash
+# Clone repository
+git clone <repo-url>
+cd angi-booking-plus-1
+
+# Install dependencies
+npm install
+
+# Start dev server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Štýl Kódu
+- ESLint konfigurácia
+- TypeScript strict mode
+- Prettier formatting
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 📞 Podpora
 
-**Use GitHub Codespaces**
+Pri problémoch:
+1. Skontrolujte [Supabase Dashboard](https://rmvflqzxxbzhilobyitw.supabase.co) → Logs
+2. Skontrolujte browser konzolu (F12)
+3. Overte, že migrácie boli aplikované
+4. Skontrolujte RLS politiky
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 📄 Licencia
 
-## What technologies are used for this project?
+Private project - All rights reserved
 
-This project is built with:
+## 👥 Autori
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+ANGIOPLUS Development Team
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/f8a6a0fc-f2a0-4c3c-bd09-b9bb6b2dde9c) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+**Verzia**: 2.0.0 (Supabase)
+**Posledná aktualizácia**: November 2025

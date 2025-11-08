@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { sql } from "@/integrations/neon/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PATIENT_FEE } from "@/lib/constants";
 
@@ -50,16 +50,24 @@ export const useSendingInvoices = (userId: string) => {
   return useQuery({
     queryKey: ["invoices-sending", userId],
     queryFn: async () => {
-      const invoices = await sql<InvoiceWithDetails[]>`
-        SELECT 
-          i.*,
-          p.full_name as receiving_doctor_name
-        FROM public.invoices i
-        JOIN public.profiles p ON i.receiving_doctor_id = p.id
-        WHERE i.sending_doctor_id = ${userId}
-        ORDER BY i.issue_date DESC
-      `;
-      return invoices;
+      const { data, error } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          profiles!invoices_receiving_doctor_id_fkey(full_name)
+        `)
+        .eq('sending_doctor_id', userId)
+        .order('issue_date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching sending invoices:', error);
+        throw error;
+      }
+
+      return (data || []).map(invoice => ({
+        ...invoice,
+        receiving_doctor_name: invoice.profiles?.full_name || '',
+      })) as InvoiceWithDetails[];
     },
     enabled: !!userId,
   });
@@ -70,31 +78,38 @@ export const useReceivingInvoices = (userId: string) => {
   return useQuery({
     queryKey: ["invoices-receiving", userId],
     queryFn: async () => {
-      const invoices = await sql<InvoiceWithDetails[]>`
-        SELECT 
-          i.*,
-          p.full_name as sending_doctor_name,
-          p.invoice_name,
-          p.invoice_address,
-          p.bank_account,
-          p.invoice_ico,
-          p.invoice_dic
-        FROM public.invoices i
-        JOIN public.profiles p ON i.sending_doctor_id = p.id
-        WHERE i.receiving_doctor_id = ${userId}
-        ORDER BY i.issue_date DESC
-      `;
-      
-      return invoices.map(inv => ({
-        ...inv,
+      const { data, error } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          profiles!invoices_sending_doctor_id_fkey(
+            full_name,
+            invoice_name,
+            invoice_address,
+            bank_account,
+            invoice_ico,
+            invoice_dic
+          )
+        `)
+        .eq('receiving_doctor_id', userId)
+        .order('issue_date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching receiving invoices:', error);
+        throw error;
+      }
+
+      return (data || []).map(invoice => ({
+        ...invoice,
+        sending_doctor_name: invoice.profiles?.full_name || '',
         sending_doctor_invoice_data: {
-          name: inv.invoice_name,
-          address: inv.invoice_address,
-          bank_account: inv.bank_account,
-          ico: inv.invoice_ico,
-          dic: inv.invoice_dic,
+          name: invoice.profiles?.invoice_name || null,
+          address: invoice.profiles?.invoice_address || null,
+          bank_account: invoice.profiles?.bank_account || null,
+          ico: invoice.profiles?.invoice_ico || null,
+          dic: invoice.profiles?.invoice_dic || null,
         }
-      }));
+      })) as InvoiceWithDetails[];
     },
     enabled: !!userId,
   });
@@ -115,62 +130,55 @@ export const useCreateInvoice = () => {
       const random = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
       const invoiceNumber = `INV-${year}${month}${day}-${random}`;
 
-      // Create invoice
-      console.log('useCreateInvoice: Creating invoice with data:', {
+      console.log('Creating invoice with data:', {
         sending_doctor_id: data.sending_doctor_id,
         receiving_doctor_id: data.receiving_doctor_id,
         patient_count: data.appointment_ids.length,
         total_amount: data.total_amount,
-        appointment_ids: data.appointment_ids
       });
       
       try {
-        const invoiceResult = await sql<Invoice[]>`
-          INSERT INTO public.invoices (
-            invoice_number, 
-            sending_doctor_id, 
-            receiving_doctor_id, 
-            total_amount, 
-            patient_count,
-            notes,
-            status
-          )
-          VALUES (
-            ${invoiceNumber},
-            ${data.sending_doctor_id},
-            ${data.receiving_doctor_id},
-            ${data.total_amount},
-            ${data.appointment_ids.length},
-            ${data.notes || null},
-            'pending'
-          )
-          RETURNING *
-        `;
+        // Create invoice
+        const { data: invoice, error: invoiceError } = await supabase
+          .from('invoices')
+          .insert({
+            invoice_number: invoiceNumber,
+            sending_doctor_id: data.sending_doctor_id,
+            receiving_doctor_id: data.receiving_doctor_id,
+            total_amount: data.total_amount.toString(),
+            patient_count: data.appointment_ids.length,
+            notes: data.notes || null,
+            status: 'pending',
+          })
+          .select()
+          .single();
         
-        if (!invoiceResult || invoiceResult.length === 0) {
-          throw new Error('Invoice creation failed - no result returned');
+        if (invoiceError) {
+          console.error('Error creating invoice:', invoiceError);
+          throw new Error(invoiceError.message);
         }
         
-        const [invoice] = invoiceResult;
         console.log('Invoice created successfully:', invoice);
 
         // Create invoice items
         console.log('Creating invoice items for', data.appointment_ids.length, 'appointments...');
-        for (const appointmentId of data.appointment_ids) {
-          try {
-            await sql`
-              INSERT INTO public.invoice_items (invoice_id, appointment_id, amount)
-              VALUES (${invoice.id}, ${appointmentId}, ${PATIENT_FEE})
-            `;
-            console.log('Invoice item created for appointment:', appointmentId);
-          } catch (itemError) {
-            console.error('Error creating invoice item for appointment', appointmentId, ':', itemError);
-            throw new Error(`Failed to create invoice item for appointment ${appointmentId}: ${itemError}`);
-          }
+        const invoiceItems = data.appointment_ids.map(appointmentId => ({
+          invoice_id: invoice.id,
+          appointment_id: appointmentId,
+          amount: PATIENT_FEE.toString(),
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('invoice_items')
+          .insert(invoiceItems);
+
+        if (itemsError) {
+          console.error('Error creating invoice items:', itemsError);
+          throw new Error(`Failed to create invoice items: ${itemsError.message}`);
         }
         
         console.log('All invoice items created successfully');
-        return invoice;
+        return invoice as Invoice;
       } catch (error) {
         console.error('Error in useCreateInvoice mutationFn:', error);
         throw error;
@@ -205,18 +213,26 @@ export const useInvoiceItems = (invoiceId: string) => {
   return useQuery({
     queryKey: ["invoice-items", invoiceId],
     queryFn: async () => {
-      const items = await sql`
-        SELECT 
-          ii.*,
-          a.patient_number,
-          a.appointment_date,
-          a.notes as procedure_type
-        FROM public.invoice_items ii
-        JOIN public.appointments a ON ii.appointment_id = a.id
-        WHERE ii.invoice_id = ${invoiceId}
-        ORDER BY a.appointment_date
-      `;
-      return items;
+      const { data, error } = await supabase
+        .from('invoice_items')
+        .select(`
+          *,
+          appointments(patient_number, appointment_date, notes)
+        `)
+        .eq('invoice_id', invoiceId)
+        .order('created_at');
+
+      if (error) {
+        console.error('Error fetching invoice items:', error);
+        throw error;
+      }
+
+      return (data || []).map(item => ({
+        ...item,
+        patient_number: item.appointments?.patient_number,
+        appointment_date: item.appointments?.appointment_date,
+        procedure_type: item.appointments?.notes,
+      }));
     },
     enabled: !!invoiceId,
   });
@@ -229,14 +245,22 @@ export const useMarkInvoicePaid = () => {
 
   return useMutation({
     mutationFn: async (invoiceId: string) => {
-      const result = await sql`
-        UPDATE public.invoices
-        SET status = 'paid',
-            paid_at = NOW()
-        WHERE id = ${invoiceId}
-        RETURNING *
-      `;
-      return result[0];
+      const { data, error } = await supabase
+        .from('invoices')
+        .update({
+          status: 'paid',
+          paid_at: new Date().toISOString(),
+        })
+        .eq('id', invoiceId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error marking invoice as paid:', error);
+        throw error;
+      }
+
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices-sending"] });
@@ -268,20 +292,29 @@ export const useDeleteInvoice = () => {
       try {
         // First delete invoice items (cascading delete)
         console.log('Deleting invoice items...');
-        const itemsResult = await sql`
-          DELETE FROM public.invoice_items
-          WHERE invoice_id = ${invoiceId}
-        `;
-        console.log('Invoice items deleted:', itemsResult);
+        const { error: itemsError } = await supabase
+          .from('invoice_items')
+          .delete()
+          .eq('invoice_id', invoiceId);
+
+        if (itemsError) {
+          console.error('Error deleting invoice items:', itemsError);
+          throw new Error(itemsError.message);
+        }
         
         // Then delete the invoice
         console.log('Deleting invoice...');
-        const invoiceResult = await sql`
-          DELETE FROM public.invoices
-          WHERE id = ${invoiceId}
-        `;
-        console.log('Invoice deleted:', invoiceResult);
+        const { error: invoiceError } = await supabase
+          .from('invoices')
+          .delete()
+          .eq('id', invoiceId);
+
+        if (invoiceError) {
+          console.error('Error deleting invoice:', invoiceError);
+          throw new Error(invoiceError.message);
+        }
         
+        console.log('Invoice deleted successfully');
         return invoiceId;
       } catch (error) {
         console.error('Error in useDeleteInvoice mutationFn:', error);
@@ -311,4 +344,3 @@ export const useDeleteInvoice = () => {
     },
   });
 };
-

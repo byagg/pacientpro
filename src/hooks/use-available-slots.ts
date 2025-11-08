@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { sql } from "@/integrations/neon/client";
+import { supabase } from "@/integrations/supabase/client";
 import { formatDoctorName } from "@/lib/utils-doctors";
 
 export interface AvailableSlot {
@@ -20,23 +20,36 @@ export const useAvailableSlots = () => {
     queryKey: ["available-slots"],
     queryFn: async () => {
       try {
-        const slots = await sql<AvailableSlot[]>`
-          SELECT 
-            oh.receiving_doctor_id,
-            p.full_name as receiving_doctor_name,
-            oh.day_of_week,
-            oh.start_time,
-            oh.end_time,
-            oh.slot_duration_minutes,
-            oh.break_start_time,
-            oh.break_end_time,
-            oh.is_active
-          FROM public.office_hours oh
-          JOIN public.profiles p ON oh.receiving_doctor_id = p.id
-          WHERE oh.is_active = true
-          ORDER BY oh.day_of_week, oh.start_time
-        `;
-        return slots;
+        const { data, error } = await supabase
+          .from('office_hours')
+          .select(`
+            receiving_doctor_id,
+            day_of_week,
+            start_time,
+            end_time,
+            slot_duration_minutes,
+            break_start_time,
+            break_end_time,
+            is_active,
+            profiles!office_hours_receiving_doctor_id_fkey(full_name)
+          `)
+          .eq('is_active', true)
+          .order('day_of_week')
+          .order('start_time');
+
+        if (error) {
+          // If table doesn't exist, return empty array
+          if (error.message?.includes('does not exist') || error.message?.includes('relation')) {
+            console.warn('office_hours table does not exist yet. Please run the migration.');
+            return [];
+          }
+          throw error;
+        }
+
+        return (data || []).map(slot => ({
+          ...slot,
+          receiving_doctor_name: slot.profiles?.full_name || '',
+        })) as AvailableSlot[];
       } catch (error: any) {
         // If table doesn't exist, return empty array
         if (error?.message?.includes('does not exist') || error?.message?.includes('relation')) {
@@ -110,4 +123,3 @@ export const generateTimeSlotsForDate = (
 
   return slots;
 };
-

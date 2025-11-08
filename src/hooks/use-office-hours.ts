@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { sql } from "@/integrations/neon/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export interface OfficeHour {
@@ -43,12 +43,23 @@ export const useOfficeHours = (receivingDoctorId: string) => {
     queryKey: ["office-hours", receivingDoctorId],
     queryFn: async () => {
       try {
-        const hours = await sql<OfficeHour[]>`
-          SELECT * FROM public.office_hours
-          WHERE receiving_doctor_id = ${receivingDoctorId}
-          ORDER BY day_of_week, start_time
-        `;
-        return hours;
+        const { data, error } = await supabase
+          .from('office_hours')
+          .select('*')
+          .eq('receiving_doctor_id', receivingDoctorId)
+          .order('day_of_week')
+          .order('start_time');
+
+        if (error) {
+          // If table doesn't exist, return empty array
+          if (error.message?.includes('does not exist') || error.message?.includes('relation')) {
+            console.warn('office_hours table does not exist yet. Please run the migration.');
+            return [];
+          }
+          throw error;
+        }
+
+        return (data || []) as OfficeHour[];
       } catch (error: any) {
         // If table doesn't exist, return empty array
         if (error?.message?.includes('does not exist') || error?.message?.includes('relation')) {
@@ -73,55 +84,27 @@ export const useCreateOfficeHour = () => {
       const breakStartTime = data.break_start_time ? `${data.break_start_time}:00` : null;
       const breakEndTime = data.break_end_time ? `${data.break_end_time}:00` : null;
       
-      // Use conditional SQL for nullable break times
-      const [hour] = breakStartTime && breakEndTime
-        ? await sql<OfficeHour[]>`
-            INSERT INTO public.office_hours (
-              receiving_doctor_id,
-              day_of_week,
-              start_time,
-              end_time,
-              slot_duration_minutes,
-              break_start_time,
-              break_end_time,
-              is_active
-            )
-            VALUES (
-              ${data.receiving_doctor_id},
-              ${data.day_of_week},
-              ${data.start_time}::time,
-              ${data.end_time}::time,
-              ${data.slot_duration_minutes ?? 30},
-              ${breakStartTime}::time,
-              ${breakEndTime}::time,
-              ${data.is_active ?? true}
-            )
-            RETURNING *
-          `
-        : await sql<OfficeHour[]>`
-            INSERT INTO public.office_hours (
-              receiving_doctor_id,
-              day_of_week,
-              start_time,
-              end_time,
-              slot_duration_minutes,
-              break_start_time,
-              break_end_time,
-              is_active
-            )
-            VALUES (
-              ${data.receiving_doctor_id},
-              ${data.day_of_week},
-              ${data.start_time}::time,
-              ${data.end_time}::time,
-              ${data.slot_duration_minutes ?? 30},
-              NULL,
-              NULL,
-              ${data.is_active ?? true}
-            )
-            RETURNING *
-          `;
-      return hour;
+      const { data: hour, error } = await supabase
+        .from('office_hours')
+        .insert({
+          receiving_doctor_id: data.receiving_doctor_id,
+          day_of_week: data.day_of_week,
+          start_time: `${data.start_time}:00`,
+          end_time: `${data.end_time}:00`,
+          slot_duration_minutes: data.slot_duration_minutes ?? 30,
+          break_start_time: breakStartTime,
+          break_end_time: breakEndTime,
+          is_active: data.is_active ?? true,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating office hour:', error);
+        throw error;
+      }
+
+      return hour as OfficeHour;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["office-hours", variables.receiving_doctor_id] });
@@ -147,65 +130,51 @@ export const useUpdateOfficeHour = () => {
 
   return useMutation({
     mutationFn: async (data: OfficeHourUpdate) => {
-      // Build dynamic UPDATE query based on provided fields
-      const updates: string[] = [];
-      const values: any[] = [];
-      let paramIndex = 1;
+      const updates: any = {};
 
       if (data.is_active !== undefined) {
-        updates.push(`is_active = $${paramIndex}`);
-        values.push(data.is_active);
-        paramIndex++;
+        updates.is_active = data.is_active;
       }
       
       if (data.start_time !== undefined) {
-        updates.push(`start_time = $${paramIndex}::time`);
-        values.push(data.start_time);
-        paramIndex++;
+        updates.start_time = `${data.start_time}:00`;
       }
       
       if (data.end_time !== undefined) {
-        updates.push(`end_time = $${paramIndex}::time`);
-        values.push(data.end_time);
-        paramIndex++;
+        updates.end_time = `${data.end_time}:00`;
       }
       
       if (data.slot_duration_minutes !== undefined) {
-        updates.push(`slot_duration_minutes = $${paramIndex}`);
-        values.push(data.slot_duration_minutes);
-        paramIndex++;
+        updates.slot_duration_minutes = data.slot_duration_minutes;
       }
       
       if (data.break_start_time !== undefined) {
-        const breakStartTime = data.break_start_time ? `${data.break_start_time}:00` : null;
-        updates.push(`break_start_time = $${paramIndex}::time`);
-        values.push(breakStartTime);
-        paramIndex++;
+        updates.break_start_time = data.break_start_time ? `${data.break_start_time}:00` : null;
       }
       
       if (data.break_end_time !== undefined) {
-        const breakEndTime = data.break_end_time ? `${data.break_end_time}:00` : null;
-        updates.push(`break_end_time = $${paramIndex}::time`);
-        values.push(breakEndTime);
-        paramIndex++;
+        updates.break_end_time = data.break_end_time ? `${data.break_end_time}:00` : null;
       }
 
-      if (updates.length === 0) {
+      if (Object.keys(updates).length === 0) {
         throw new Error('No fields to update');
       }
 
-      updates.push(`updated_at = now()`);
-      values.push(data.id);
+      updates.updated_at = new Date().toISOString();
 
-      const query = `
-        UPDATE public.office_hours
-        SET ${updates.join(', ')}
-        WHERE id = $${paramIndex}
-        RETURNING *
-      `;
+      const { data: hour, error } = await supabase
+        .from('office_hours')
+        .update(updates)
+        .eq('id', data.id)
+        .select()
+        .single();
 
-      const result = await sql.unsafe(query, values);
-      return result[0] as OfficeHour;
+      if (error) {
+        console.error('Error updating office hour:', error);
+        throw error;
+      }
+
+      return hour as OfficeHour;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["office-hours", data.receiving_doctor_id] });
@@ -231,10 +200,16 @@ export const useDeleteOfficeHour = () => {
 
   return useMutation({
     mutationFn: async ({ id, receivingDoctorId }: { id: string; receivingDoctorId: string }) => {
-      await sql`
-        DELETE FROM public.office_hours
-        WHERE id = ${id}
-      `;
+      const { error } = await supabase
+        .from('office_hours')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting office hour:', error);
+        throw error;
+      }
+
       return { id, receivingDoctorId };
     },
     onSuccess: (_, variables) => {
@@ -253,4 +228,3 @@ export const useDeleteOfficeHour = () => {
     },
   });
 };
-

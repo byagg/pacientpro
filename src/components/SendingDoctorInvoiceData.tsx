@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { User, MapPin, CreditCard, Building2, FileText, ChevronDown, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { sql } from "@/integrations/neon/client";
+import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDoctorName } from "@/lib/utils-doctors";
@@ -39,15 +39,30 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
     queryFn: async () => {
       console.log('Fetching sending doctors for receiving doctor:', receivingDoctorId);
       
-      const result = await sql<SendingDoctor[]>`
-        SELECT DISTINCT
-          p.id,
-          p.full_name
-        FROM public.profiles p
-        INNER JOIN public.appointments a ON a.angiologist_id = p.id
-        WHERE (a.examined_by = ${receivingDoctorId} OR a.receiving_doctor_id = ${receivingDoctorId})
-        ORDER BY p.full_name
-      `;
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('angiologist_id, profiles!appointments_angiologist_id_fkey(id, full_name)')
+        .or(`examined_by.eq.${receivingDoctorId},receiving_doctor_id.eq.${receivingDoctorId}`);
+
+      if (error) {
+        console.error('Error fetching sending doctors:', error);
+        throw error;
+      }
+
+      // Get unique doctors
+      const uniqueDoctors = new Map();
+      (data || []).forEach(appointment => {
+        if (appointment.profiles) {
+          uniqueDoctors.set(appointment.profiles.id, {
+            id: appointment.profiles.id,
+            full_name: appointment.profiles.full_name,
+          });
+        }
+      });
+
+      const result = Array.from(uniqueDoctors.values()).sort((a, b) => 
+        a.full_name.localeCompare(b.full_name)
+      ) as SendingDoctor[];
       
       console.log('Found sending doctors:', result.length);
       console.log('Sending doctors list:', result);
@@ -65,23 +80,20 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
     queryFn: async () => {
       console.log('Fetching profile for sending doctor:', selectedDoctorId);
       
-      const result = await sql<DoctorProfile[]>`
-        SELECT 
-          id,
-          full_name,
-          email,
-          invoice_name,
-          invoice_address,
-          bank_account,
-          invoice_ico,
-          invoice_dic
-        FROM public.profiles
-        WHERE id = ${selectedDoctorId}
-      `;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, invoice_name, invoice_address, bank_account, invoice_ico, invoice_dic')
+        .eq('id', selectedDoctorId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching doctor profile:', error);
+        throw error;
+      }
       
-      console.log('Profile loaded:', result[0]);
+      console.log('Profile loaded:', data);
       
-      return result[0] || null;
+      return data || null;
     },
     enabled: !!selectedDoctorId,
     refetchInterval: 15000, // Refresh every 15 seconds

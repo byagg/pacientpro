@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { sql } from "@/integrations/neon/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export interface Appointment {
@@ -32,17 +32,24 @@ export const useAppointments = (userId: string) => {
     queryFn: async () => {
       if (!userId) return [];
       
-      const data = await sql`
-        SELECT 
-          a.*,
-          p.full_name as receiving_doctor_name
-        FROM public.appointments a
-        LEFT JOIN public.profiles p ON a.receiving_doctor_id = p.id
-        WHERE a.angiologist_id = ${userId}
-        ORDER BY a.appointment_date DESC
-      `;
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          profiles!appointments_receiving_doctor_id_fkey(full_name)
+        `)
+        .eq('angiologist_id', userId)
+        .order('appointment_date', { ascending: false });
 
-      return (data as Appointment[]) || [];
+      if (error) {
+        console.error('Error fetching appointments:', error);
+        throw error;
+      }
+
+      return (data || []).map(appointment => ({
+        ...appointment,
+        receiving_doctor_name: appointment.profiles?.full_name || null,
+      })) as Appointment[];
     },
     enabled: !!userId,
   });
@@ -54,11 +61,23 @@ export const useCreateAppointment = () => {
 
   return useMutation({
     mutationFn: async (data: AppointmentInsert) => {
-      const [result] = await sql`
-        INSERT INTO public.appointments (angiologist_id, patient_number, appointment_date, notes, status, receiving_doctor_id)
-        VALUES (${data.angiologist_id}, ${data.patient_number}, ${data.appointment_date}, ${data.notes}, ${data.status || 'scheduled'}, ${data.receiving_doctor_id || null})
-        RETURNING *
-      `;
+      const { data: result, error } = await supabase
+        .from('appointments')
+        .insert({
+          angiologist_id: data.angiologist_id,
+          patient_number: data.patient_number,
+          appointment_date: data.appointment_date,
+          notes: data.notes,
+          status: data.status || 'scheduled',
+          receiving_doctor_id: data.receiving_doctor_id || null,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating appointment:', error);
+        throw error;
+      }
 
       return result as Appointment;
     },
@@ -87,10 +106,15 @@ export const useDeleteAppointment = () => {
   return useMutation({
     mutationFn: async ({ appointmentId, userId }: { appointmentId: string; userId: string }) => {
       // Delete appointment (will cascade delete commissions)
-      await sql`
-        DELETE FROM public.appointments
-        WHERE id = ${appointmentId}
-      `;
+      const { error } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('id', appointmentId);
+
+      if (error) {
+        console.error('Error deleting appointment:', error);
+        throw error;
+      }
 
       return { appointmentId, userId };
     },

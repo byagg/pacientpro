@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calculator, FileText, Loader2, Euro, Search, Filter, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { sql } from "@/integrations/neon/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useCreateInvoice } from "@/hooks/use-invoices";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
@@ -43,27 +43,48 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
       const oneYearAgo = new Date();
       oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-      const result = await sql<ExaminedPatient[]>`
-        SELECT 
-          a.id,
-          a.patient_number,
-          a.angiologist_id,
-          p.full_name as sending_doctor_name,
-          a.appointment_date,
-          a.examined_at,
-          a.notes as procedure_type
-        FROM public.appointments a
-        JOIN public.profiles p ON a.angiologist_id = p.id
-        WHERE a.status = 'completed'
-          AND a.examined_at IS NOT NULL
-          AND a.examined_at >= ${oneYearAgo.toISOString()}
-          AND (a.examined_by = ${receivingDoctorId} OR a.receiving_doctor_id = ${receivingDoctorId})
-          AND NOT EXISTS (
-            SELECT 1 FROM public.invoice_items ii
-            WHERE ii.appointment_id = a.id
-          )
-        ORDER BY a.examined_at DESC
-      `;
+      // First, get invoiced appointment IDs
+      const { data: invoicedItems } = await supabase
+        .from('invoice_items')
+        .select('appointment_id');
+
+      const invoicedAppointmentIds = new Set((invoicedItems || []).map(item => item.appointment_id));
+
+      // Then get appointments
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          id,
+          patient_number,
+          angiologist_id,
+          appointment_date,
+          examined_at,
+          notes,
+          profiles!appointments_angiologist_id_fkey(full_name)
+        `)
+        .eq('status', 'completed')
+        .not('examined_at', 'is', null)
+        .gte('examined_at', oneYearAgo.toISOString())
+        .or(`examined_by.eq.${receivingDoctorId},receiving_doctor_id.eq.${receivingDoctorId}`)
+        .order('examined_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching examined patients:', error);
+        throw error;
+      }
+
+      // Filter out invoiced appointments
+      const result = (data || [])
+        .filter(appointment => !invoicedAppointmentIds.has(appointment.id))
+        .map(appointment => ({
+          id: appointment.id,
+          patient_number: appointment.patient_number,
+          angiologist_id: appointment.angiologist_id,
+          sending_doctor_name: appointment.profiles?.full_name || '',
+          appointment_date: appointment.appointment_date,
+          examined_at: appointment.examined_at,
+          procedure_type: appointment.notes || '',
+        })) as ExaminedPatient[];
       
       return result;
     },

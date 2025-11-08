@@ -6,7 +6,7 @@ import { FileText, Calendar, User, Euro, Loader2, Eye, Trash2 } from "lucide-rea
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
-import { sql } from "@/integrations/neon/client";
+import { supabase } from "@/integrations/supabase/client";
 import InvoicePreview from "./InvoicePreview";
 import { formatDoctorName } from "@/lib/utils-doctors";
 import { useDeleteInvoice } from "@/hooks/use-invoices";
@@ -35,23 +35,31 @@ const IssuedInvoicesList = ({ receivingDoctorId }: IssuedInvoicesListProps) => {
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["issued-invoices", receivingDoctorId],
     queryFn: async () => {
-      const result = await sql<IssuedInvoice[]>`
-        SELECT 
-          i.id,
-          i.invoice_number,
-          i.sending_doctor_id,
-          i.total_amount,
-          i.patient_count,
-          i.issue_date,
-          i.status,
-          i.paid_at,
-          p.full_name as sending_doctor_name
-        FROM public.invoices i
-        JOIN public.profiles p ON i.sending_doctor_id = p.id
-        WHERE i.receiving_doctor_id = ${receivingDoctorId}
-        ORDER BY i.issue_date DESC
-      `;
-      return result;
+      const { data, error } = await supabase
+        .from('invoices')
+        .select(`
+          id,
+          invoice_number,
+          sending_doctor_id,
+          total_amount,
+          patient_count,
+          issue_date,
+          status,
+          paid_at,
+          profiles!invoices_sending_doctor_id_fkey(full_name)
+        `)
+        .eq('receiving_doctor_id', receivingDoctorId)
+        .order('issue_date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching issued invoices:', error);
+        throw error;
+      }
+
+      return (data || []).map(invoice => ({
+        ...invoice,
+        sending_doctor_name: invoice.profiles?.full_name || '',
+      })) as IssuedInvoice[];
     },
     enabled: !!receivingDoctorId,
   });

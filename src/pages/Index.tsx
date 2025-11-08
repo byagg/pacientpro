@@ -29,14 +29,6 @@ const Index = () => {
             >
               Prihlásiť sa
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => navigate("/django-demo")}
-              className="shadow-elegant"
-            >
-              Django Demo
-            </Button>
           </div>
         </div>
 

@@ -4,7 +4,7 @@ import { FileText, Printer, X } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
-import { sql } from "@/integrations/neon/client";
+import { supabase } from "@/integrations/supabase/client";
 import { formatDoctorName } from "@/lib/utils-doctors";
 
 interface InvoicePreviewProps {
@@ -51,50 +51,64 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
   const { data: invoice, isLoading: loadingInvoice } = useQuery({
     queryKey: ["invoice-detail", invoiceId],
     queryFn: async () => {
-      const result = await sql<InvoiceData[]>`
-        SELECT 
-          i.id,
-          i.invoice_number,
-          i.issue_date,
-          i.status,
-          i.total_amount,
-          i.patient_count,
-          i.notes,
-          i.sending_doctor_id,
-          i.receiving_doctor_id,
-          
-          COALESCE(s.invoice_name, s.full_name) as sending_doctor_name,
-          s.invoice_address as sending_doctor_address,
-          s.invoice_ico as sending_doctor_ico,
-          s.invoice_dic as sending_doctor_dic,
-          s.bank_account as sending_doctor_bank_account,
-          s.signature_image as sending_doctor_signature,
-          
-          COALESCE(r.invoice_name, r.full_name) as receiving_doctor_name,
-          r.invoice_address as receiving_doctor_address,
-          r.invoice_ico as receiving_doctor_ico,
-          r.invoice_dic as receiving_doctor_dic,
-          r.bank_account as receiving_doctor_bank_account,
-          r.signature_image as receiving_doctor_signature
-          
-        FROM public.invoices i
-        LEFT JOIN public.profiles s ON i.sending_doctor_id = s.id
-        LEFT JOIN public.profiles r ON i.receiving_doctor_id = r.id
-        WHERE i.id = ${invoiceId}
-      `;
+      const { data, error } = await supabase
+        .from('invoices')
+        .select(`
+          id,
+          invoice_number,
+          issue_date,
+          status,
+          total_amount,
+          patient_count,
+          notes,
+          sending_doctor_id,
+          receiving_doctor_id,
+          sending_doctor:profiles!invoices_sending_doctor_id_fkey(
+            full_name,
+            invoice_name,
+            invoice_address,
+            invoice_ico,
+            invoice_dic,
+            bank_account,
+            signature_image
+          ),
+          receiving_doctor:profiles!invoices_receiving_doctor_id_fkey(
+            full_name,
+            invoice_name,
+            invoice_address,
+            invoice_ico,
+            invoice_dic,
+            bank_account,
+            signature_image
+          )
+        `)
+        .eq('id', invoiceId)
+        .single();
+
+      if (error) {
+        console.error('Error loading invoice:', error);
+        throw error;
+      }
+
+      const result = {
+        ...data,
+        sending_doctor_name: data.sending_doctor?.invoice_name || data.sending_doctor?.full_name,
+        sending_doctor_address: data.sending_doctor?.invoice_address,
+        sending_doctor_ico: data.sending_doctor?.invoice_ico,
+        sending_doctor_dic: data.sending_doctor?.invoice_dic,
+        sending_doctor_bank_account: data.sending_doctor?.bank_account,
+        sending_doctor_signature: data.sending_doctor?.signature_image,
+        receiving_doctor_name: data.receiving_doctor?.invoice_name || data.receiving_doctor?.full_name,
+        receiving_doctor_address: data.receiving_doctor?.invoice_address,
+        receiving_doctor_ico: data.receiving_doctor?.invoice_ico,
+        receiving_doctor_dic: data.receiving_doctor?.invoice_dic,
+        receiving_doctor_bank_account: data.receiving_doctor?.bank_account,
+        receiving_doctor_signature: data.receiving_doctor?.signature_image,
+      };
       
-      console.log('Invoice data loaded:', result[0]);
-      console.log('Sending doctor ID:', result[0]?.sending_doctor_id);
-      console.log('Sending doctor name:', result[0]?.sending_doctor_name);
-      console.log('Sending doctor data:', {
-        name: result[0]?.sending_doctor_name,
-        address: result[0]?.sending_doctor_address,
-        ico: result[0]?.sending_doctor_ico,
-        dic: result[0]?.sending_doctor_dic,
-        bank: result[0]?.sending_doctor_bank_account
-      });
+      console.log('Invoice data loaded:', result);
       
-      return result[0];
+      return result;
     },
     enabled: !!invoiceId && open,
   });
@@ -102,18 +116,25 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
   const { data: items = [], isLoading: loadingItems } = useQuery({
     queryKey: ["invoice-items", invoiceId],
     queryFn: async () => {
-      const result = await sql<InvoiceItem[]>`
-        SELECT 
-          a.patient_number,
-          a.appointment_date,
-          ii.amount
-        FROM public.invoice_items ii
-        JOIN public.appointments a ON ii.appointment_id = a.id
-        WHERE ii.invoice_id = ${invoiceId}
-        ORDER BY a.appointment_date
-      `;
-      
-      return result;
+      const { data, error } = await supabase
+        .from('invoice_items')
+        .select(`
+          amount,
+          appointments(patient_number, appointment_date)
+        `)
+        .eq('invoice_id', invoiceId)
+        .order('created_at');
+
+      if (error) {
+        console.error('Error loading invoice items:', error);
+        throw error;
+      }
+
+      return (data || []).map(item => ({
+        patient_number: item.appointments?.patient_number || '',
+        appointment_date: item.appointments?.appointment_date || '',
+        amount: item.amount,
+      })) as InvoiceItem[];
     },
     enabled: !!invoiceId && open,
   });

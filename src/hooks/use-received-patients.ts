@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { sql } from "@/integrations/neon/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Appointment } from "./use-appointments";
 
@@ -17,18 +17,26 @@ export const useReceivedPatients = (receivingDoctorId: string) => {
       try {
         // Get all appointments (waiting and examined)
         // These are all patients sent by sending doctors
-        const appointments = await sql<ReceivedAppointment[]>`
-          SELECT 
-            a.*,
-            p.full_name as sending_doctor_name,
-            p.email as sending_doctor_email
-          FROM public.appointments a
-          JOIN public.profiles p ON a.angiologist_id = p.id
-          WHERE a.status IN ('scheduled', 'completed')
-          ORDER BY 
-            CASE WHEN a.examined_at IS NULL THEN 0 ELSE 1 END,
-            a.appointment_date ASC
-        `;
+        const { data, error } = await supabase
+          .from('appointments')
+          .select(`
+            *,
+            profiles!appointments_angiologist_id_fkey(full_name, email)
+          `)
+          .in('status', ['scheduled', 'completed'])
+          .order('examined_at', { ascending: true, nullsFirst: true })
+          .order('appointment_date', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching received patients:', error);
+          throw error;
+        }
+        
+        const appointments = (data || []).map(appointment => ({
+          ...appointment,
+          sending_doctor_name: appointment.profiles?.full_name || '',
+          sending_doctor_email: appointment.profiles?.email || '',
+        })) as ReceivedAppointment[];
         
         console.log('Received patients query result:', appointments.length, 'patients');
         return appointments;
@@ -63,31 +71,46 @@ export const useMarkPatientExamined = () => {
       examinedBy: string;
     }) => {
       // Update appointment - mark as examined
-      const [appointment] = await sql<Appointment[]>`
-        UPDATE public.appointments
-        SET 
-          examined_at = ${examinedAt}::timestamptz,
-          examined_by = ${examinedBy},
-          receiving_doctor_id = ${examinedBy},
-          status = 'completed'
-        WHERE id = ${appointmentId}
-        RETURNING *
-      `;
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .update({
+          examined_at: examinedAt,
+          examined_by: examinedBy,
+          receiving_doctor_id: examinedBy,
+          status: 'completed',
+        })
+        .eq('id', appointmentId)
+        .select()
+        .single();
 
-      // Create commission if it doesn't exist
-      const existingCommissions = await sql`
-        SELECT id FROM public.commissions
-        WHERE appointment_id = ${appointmentId}
-      `;
-
-      if (existingCommissions.length === 0) {
-        await sql`
-          INSERT INTO public.commissions (angiologist_id, appointment_id, amount, status)
-          VALUES (${appointment.angiologist_id}, ${appointmentId}, 14.00, 'pending')
-        `;
+      if (appointmentError) {
+        console.error('Error marking patient as examined:', appointmentError);
+        throw appointmentError;
       }
 
-      return appointment;
+      // Create commission if it doesn't exist
+      const { data: existingCommissions } = await supabase
+        .from('commissions')
+        .select('id')
+        .eq('appointment_id', appointmentId);
+
+      if (!existingCommissions || existingCommissions.length === 0) {
+        const { error: commissionError } = await supabase
+          .from('commissions')
+          .insert({
+            angiologist_id: appointment.angiologist_id,
+            appointment_id: appointmentId,
+            amount: 14.00,
+            status: 'pending',
+          });
+
+        if (commissionError) {
+          console.error('Error creating commission:', commissionError);
+          // Don't throw, just log - commission creation is not critical
+        }
+      }
+
+      return appointment as Appointment;
     },
     onSuccess: (data) => {
       // Invalidate ALL related queries to ensure synchronization
@@ -108,4 +131,3 @@ export const useMarkPatientExamined = () => {
     },
   });
 };
-

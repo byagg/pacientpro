@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { sql } from "@/integrations/neon/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export interface Profile {
@@ -34,18 +34,22 @@ export const useProfile = (userId: string) => {
       if (!userId) return null;
       
       try {
-        const data = await sql`
-        SELECT id, email, full_name, bank_account, ambulance_code,
-               invoice_name, invoice_address, invoice_ico, invoice_dic, signature_image, created_at
-        FROM profiles
-        WHERE id = ${userId}
-        `;
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, email, full_name, bank_account, ambulance_code, invoice_name, invoice_address, invoice_ico, invoice_dic, signature_image, created_at')
+          .eq('id', userId)
+          .single();
 
-        if (data.length === 0) {
+        if (error) {
+          console.error('Error fetching profile:', error);
+          throw error;
+        }
+
+        if (!data) {
           console.warn('Profile not found for user:', userId);
           return null;
         }
-        return data[0] as Profile;
+        return data as Profile;
       } catch (err) {
         console.error('Unexpected error in useProfile:', err);
         throw err;
@@ -70,31 +74,34 @@ export const useUpdateProfile = () => {
       console.log('Starting profile update:', { userId, updates });
 
       try {
-        // Use template literal syntax - much simpler and works correctly with Neon
-        const result = await sql`
-          UPDATE public.profiles
-          SET 
-            invoice_name = ${updates.invoice_name || null},
-            invoice_address = ${updates.invoice_address || null},
-            bank_account = ${updates.bank_account || null},
-            invoice_ico = ${updates.invoice_ico || null},
-            invoice_dic = ${updates.invoice_dic || null},
-            signature_image = ${updates.signature_image || null}
-          WHERE id = ${userId}
-          RETURNING id, email, full_name, bank_account, ambulance_code,
-                    invoice_name, invoice_address, invoice_ico, invoice_dic, signature_image, created_at
-        `;
+        const { data, error } = await supabase
+          .from('profiles')
+          .update({
+            invoice_name: updates.invoice_name || null,
+            invoice_address: updates.invoice_address || null,
+            bank_account: updates.bank_account || null,
+            invoice_ico: updates.invoice_ico || null,
+            invoice_dic: updates.invoice_dic || null,
+            signature_image: updates.signature_image || null,
+          })
+          .eq('id', userId)
+          .select()
+          .single();
         
-        console.log('Update result:', result);
+        console.log('Update result:', data);
         
-        if (!result || result.length === 0) {
-          throw new Error('Failed to update profile - no rows returned');
+        if (error) {
+          console.error('Error updating profile:', error);
+          throw error;
         }
         
-        const profile = result[0] as Profile;
-        console.log('Successfully updated profile:', profile);
+        if (!data) {
+          throw new Error('Failed to update profile - no data returned');
+        }
         
-        return profile;
+        console.log('Successfully updated profile:', data);
+        
+        return data as Profile;
       } catch (error) {
         console.error('Error updating profile:', error);
         throw error;
