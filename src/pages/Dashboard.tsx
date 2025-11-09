@@ -84,17 +84,17 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted">
       {/* 🔧 DEV MODE Panel */}
       {DEV_MODE && (
-        <div className="bg-orange-500 text-white px-4 py-2 text-center text-sm font-semibold">
+        <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-3 text-center text-sm font-semibold shadow-lg">
           <div className="container mx-auto flex items-center justify-center gap-4">
-            <Code className="h-4 w-4" />
-            <span>DEV MODE</span>
+            <Code className="h-4 w-4 animate-pulse" />
+            <span className="font-bold">DEV MODE</span>
             <span className="text-orange-200">|</span>
             <span>Prepnúť rolu:</span>
             <Button
               size="sm"
               variant={devUserType === 'sending' ? 'secondary' : 'outline'}
               onClick={() => setDevUserType('sending')}
-              className={devUserType === 'sending' ? 'bg-white text-orange-500 hover:bg-white/90' : 'bg-orange-600 hover:bg-orange-700 border-white/20'}
+              className={devUserType === 'sending' ? 'bg-white text-orange-500 hover:bg-white/90 shadow-md' : 'bg-orange-600 hover:bg-orange-700 border-white/20 hover:border-white/40'}
             >
               <UserPlus className="h-3 w-3 mr-1" />
               Odosielajúci
@@ -103,7 +103,7 @@ const Dashboard = () => {
               size="sm"
               variant={devUserType === 'receiving' ? 'secondary' : 'outline'}
               onClick={() => setDevUserType('receiving')}
-              className={devUserType === 'receiving' ? 'bg-white text-orange-500 hover:bg-white/90' : 'bg-orange-600 hover:bg-orange-700 border-white/20'}
+              className={devUserType === 'receiving' ? 'bg-white text-orange-500 hover:bg-white/90 shadow-md' : 'bg-orange-600 hover:bg-orange-700 border-white/20 hover:border-white/40'}
             >
               <UserCheck className="h-3 w-3 mr-1" />
               Prijímajúci
@@ -112,18 +112,20 @@ const Dashboard = () => {
         </div>
       )}
 
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+      <header className="border-b bg-card/70 backdrop-blur-md sticky top-0 z-10 shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">PACIENT-PRO</h1>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-primary/10 to-accent/10">
+              <Calendar className="h-6 w-6 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">PACIENT-PRO</h1>
             {DEV_MODE && (
-              <Badge variant="outline" className="ml-2 text-xs bg-orange-100 text-orange-700 border-orange-300">
+              <Badge variant="outline" className="ml-2 text-xs bg-orange-100 text-orange-700 border-orange-300 animate-pulse">
                 DEV
               </Badge>
             )}
           </div>
-          <Button variant="outline" onClick={handleLogout}>
+          <Button variant="outline" onClick={handleLogout} className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors">
             <LogOut className="mr-2 h-4 w-4" />
             {DEV_MODE ? 'Zavrieť DEV' : 'Odhlásiť sa'}
           </Button>
@@ -131,22 +133,22 @@ const Dashboard = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
+        <div className="mb-8 animate-in fade-in duration-500">
           <div className="flex items-center gap-3 mb-2">
-            <h2 className="text-3xl font-bold">Dashboard</h2>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Dashboard</h2>
             {user?.user_type === 'receiving' ? (
-              <Badge variant="default" className="gap-1.5 px-3 py-1">
+              <Badge className="gap-1.5 px-3 py-1 bg-gradient-to-r from-primary to-accent text-white shadow-md">
                 <UserCheck className="h-4 w-4" />
                 Prijímajúci lekár
               </Badge>
             ) : (
-              <Badge variant="secondary" className="gap-1.5 px-3 py-1">
+              <Badge variant="secondary" className="gap-1.5 px-3 py-1 shadow-md">
                 <UserPlus className="h-4 w-4" />
                 Odosielajúci lekár
               </Badge>
             )}
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-lg">
             {user?.user_type === 'receiving' 
               ? "Spravujte ordinančné hodiny a vyšetrených pacientov"
               : "Spravujte rezervácie a prijímajte manipulačné poplatky"

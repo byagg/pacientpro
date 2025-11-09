@@ -107,18 +107,24 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
-      <Card className="w-full max-w-md shadow-elegant">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/5 rounded-full blur-3xl animate-pulse delay-300"></div>
+      </div>
+      
+      <Card className="w-full max-w-md shadow-luxury border-border/50 backdrop-blur-sm bg-card/95 animate-in fade-in zoom-in-95 duration-500 relative z-10">
         <CardHeader className="space-y-3 text-center">
           <div className="flex justify-center mb-2">
-            <div className="p-3 rounded-full bg-primary/10">
-              <Heart className="h-8 w-8 text-primary" />
+            <div className="p-3 rounded-full bg-gradient-to-br from-primary/10 to-accent/10 shadow-md hover-lift">
+              <Heart className="h-8 w-8 text-primary animate-pulse" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             {isLogin ? "Prihlásenie" : "Registrácia"}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-base">
             {isLogin
               ? "Prihláste sa do systému PACIENT-PRO"
               : "Vytvorte si nový účet v systéme PACIENT-PRO"}
@@ -200,7 +206,7 @@ const Auth = () => {
             </div>
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02]"
               disabled={loading}
             >
               {loading ? (
@@ -215,11 +221,11 @@ const Auth = () => {
               )}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm">
+          <div className="mt-6 text-center text-sm">
             <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-primary hover:underline"
+              className="text-primary hover:text-accent transition-colors duration-200 font-medium hover:underline"
             >
               {isLogin
                 ? "Ešte nemáte účet? Registrujte sa"
