@@ -1,11 +1,13 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Calendar, User, Clock, FileText, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Calendar, User, Clock, FileText, CheckCircle2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useDeleteAppointment } from "@/hooks/use-appointments";
 
 interface InvoicedPatientsListProps {
   receivingDoctorId: string;
@@ -25,6 +27,8 @@ interface InvoicedPatient {
 }
 
 const InvoicedPatientsList = ({ receivingDoctorId }: InvoicedPatientsListProps) => {
+  const deleteAppointment = useDeleteAppointment();
+
   // Fetch invoiced patients - those who are in invoice_items
   const { data: patients = [], isLoading } = useQuery({
     queryKey: ["invoiced-patients", receivingDoctorId],
@@ -103,6 +107,12 @@ const InvoicedPatientsList = ({ receivingDoctorId }: InvoicedPatientsListProps) 
     }));
   }, [patients]);
 
+  const handleDelete = async (appointmentId: string, patientNumber: string, angiologistId: string) => {
+    if (confirm(`Naozaj chcete vymazať pacienta ${patientNumber}? Táto akcia je nenávratná.`)) {
+      await deleteAppointment.mutateAsync({ appointmentId, userId: angiologistId });
+    }
+  };
+
   if (isLoading) {
     return (
       <Card className="shadow-card">
@@ -150,7 +160,7 @@ const InvoicedPatientsList = ({ receivingDoctorId }: InvoicedPatientsListProps) 
                       key={patient.id}
                       className="border rounded-md p-2 bg-card hover:bg-accent/50 transition-colors text-sm"
                     >
-                      <div className="flex justify-between items-start">
+                      <div className="flex justify-between items-start gap-2">
                         <div className="flex-1 space-y-1">
                           <div className="flex items-center gap-2">
                             <p className="font-medium">{patient.patient_number}</p>
@@ -180,6 +190,15 @@ const InvoicedPatientsList = ({ receivingDoctorId }: InvoicedPatientsListProps) 
                             </p>
                           )}
                         </div>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDelete(patient.id, patient.patient_number, patient.angiologist_id)}
+                          disabled={deleteAppointment.isPending}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
                     </div>
                   ))}
