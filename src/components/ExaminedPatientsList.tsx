@@ -2,13 +2,12 @@ import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, DollarSign, Loader2, Trash2, CheckCircle } from "lucide-react";
+import { Calendar, Clock, User, Loader2, Trash2, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useReceivedPatients } from "@/hooks/use-received-patients";
-import { useCommissions, useMarkCommissionPaid } from "@/hooks/use-commissions";
+import { useCommissions } from "@/hooks/use-commissions";
 import { useDeleteAppointment } from "@/hooks/use-appointments";
-import { useToast } from "@/hooks/use-toast";
 import { PATIENT_FEE } from "@/lib/constants";
 
 interface ExaminedPatientsListProps {
@@ -18,9 +17,7 @@ interface ExaminedPatientsListProps {
 const ExaminedPatientsList = ({ receivingDoctorId }: ExaminedPatientsListProps) => {
   const { data: allPatients = [], isLoading } = useReceivedPatients(receivingDoctorId);
   const { data: allCommissions = [] } = useCommissions(receivingDoctorId);
-  const markPaid = useMarkCommissionPaid();
   const deleteAppointment = useDeleteAppointment();
-  const { toast } = useToast();
 
   // Filter only examined patients from last year
   const { examinedPatients, commissions } = useMemo(() => {
@@ -41,24 +38,6 @@ const ExaminedPatientsList = ({ receivingDoctorId }: ExaminedPatientsListProps) 
 
     return { examinedPatients: examined, commissions: commissionMap };
   }, [allPatients, allCommissions]);
-
-  const handlePayCommission = async (appointmentId: string) => {
-    const commission = commissions.get(appointmentId);
-    if (!commission) {
-      toast({
-        variant: "destructive",
-        title: "Chyba",
-        description: "Provízia pre tohto pacienta neexistuje",
-      });
-      return;
-    }
-
-    const now = new Date().toISOString();
-    await markPaid.mutateAsync({ 
-      commissionId: commission.id, 
-      paidAt: now 
-    });
-  };
 
   const handleDelete = async (appointmentId: string, patientNumber: string, userId: string) => {
     if (confirm(`Naozaj chcete vymazať pacienta ${patientNumber}?`)) {
@@ -142,26 +121,6 @@ const ExaminedPatientsList = ({ receivingDoctorId }: ExaminedPatientsListProps) 
                   </div>
                   
                   <div className="flex gap-2 pt-3 border-t">
-                    {!isPaid && (
-                      <Button
-                        size="sm"
-                        onClick={() => handlePayCommission(patient.id)}
-                        disabled={markPaid.isPending}
-                        className="flex-1"
-                      >
-                        {markPaid.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                            Označujem...
-                          </>
-                        ) : (
-                          <>
-                            <DollarSign className="mr-2 h-3 w-3" />
-                            Zaplatiť poplatok odosielajúcemu lekárovi
-                          </>
-                        )}
-                      </Button>
-                    )}
                     <Button
                       size="sm"
                       variant="destructive"
