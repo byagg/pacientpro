@@ -167,6 +167,7 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
         {/* Action button to create invoice - always visible */}
         <div className="border-t pt-4 mt-4">
           <Button
+            type="button"
             onClick={() => {
               console.log('Creating invoice for doctor:', selectedDoctorId);
               // Scroll to the invoice creator section

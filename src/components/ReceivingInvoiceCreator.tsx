@@ -355,6 +355,7 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
                         <h3 className="font-semibold text-lg">{formatDoctorName(doctorName)}</h3>
                         {selectedFromThisDoctor > 0 && (
                           <Button
+                            type="button"
                             onClick={() => handleCreateInvoice(doctorId)}
                             disabled={createInvoice.isPending}
                             size="sm"
