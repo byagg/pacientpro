@@ -30,9 +30,11 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (DEV_MODE) {
-      // DEV MODE: Vytvor mock používateľa
+      // DEV MODE: Vytvor mock používateľa s UUID formátovaným ID
       const mockUser: User = {
-        id: devUserType === 'sending' ? 'dev-sending-001' : 'dev-receiving-001',
+        id: devUserType === 'sending' 
+          ? '00000000-0000-0000-0000-000000000001'  // Mock UUID pre odosielajúceho
+          : '00000000-0000-0000-0000-000000000002', // Mock UUID pre prijímajúceho
         email: devUserType === 'sending' ? 'odosielajuci@dev.sk' : 'prijimajuci@dev.sk',
         full_name: devUserType === 'sending' ? 'DEV Odosielajúci Lekár' : 'DEV Prijímajúci Lekár',
         user_type: devUserType,
