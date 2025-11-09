@@ -100,13 +100,33 @@ CREATE POLICY "Receiving doctors can manage their office hours"
 -- INVOICES TABLE - DEV MODE polícia
 -- ============================================
 
+DROP POLICY IF EXISTS "Users can view invoices" ON public.invoices;
+
+CREATE POLICY "Users can view invoices"
+  ON public.invoices FOR SELECT
+  USING (
+    auth.uid() = sending_doctor_id 
+    OR auth.uid() = receiving_doctor_id
+    OR sending_doctor_id IN (
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000002'
+    )
+    OR receiving_doctor_id IN (
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000002'
+    )
+  );
+
 DROP POLICY IF EXISTS "Users can create invoices" ON public.invoices;
 
 CREATE POLICY "Users can create invoices"
   ON public.invoices FOR INSERT
   WITH CHECK (
     auth.uid() = receiving_doctor_id
-    OR receiving_doctor_id = '00000000-0000-0000-0000-000000000002'
+    OR receiving_doctor_id IN (
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000002'
+    )
   );
 
 DROP POLICY IF EXISTS "Users can update their invoices" ON public.invoices;
@@ -125,6 +145,40 @@ CREATE POLICY "Users can update their invoices"
       '00000000-0000-0000-0000-000000000002'
     )
   );
+
+DROP POLICY IF EXISTS "Users can delete invoices" ON public.invoices;
+
+CREATE POLICY "Users can delete invoices"
+  ON public.invoices FOR DELETE
+  USING (
+    auth.uid() = receiving_doctor_id
+    OR receiving_doctor_id IN (
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000002'
+    )
+  );
+
+-- ============================================
+-- INVOICE_ITEMS TABLE - DEV MODE polícia
+-- ============================================
+
+DROP POLICY IF EXISTS "Users can view invoice items" ON public.invoice_items;
+
+CREATE POLICY "Users can view invoice items"
+  ON public.invoice_items FOR SELECT
+  USING (true); -- Invoice items sú viditeľné pre všetkých (cez JOIN s invoices)
+
+DROP POLICY IF EXISTS "Users can create invoice items" ON public.invoice_items;
+
+CREATE POLICY "Users can create invoice items"
+  ON public.invoice_items FOR INSERT
+  WITH CHECK (true); -- Povoliť INSERT pre všetkých (RLS je na invoices úrovni)
+
+DROP POLICY IF EXISTS "Users can delete invoice items" ON public.invoice_items;
+
+CREATE POLICY "Users can delete invoice items"
+  ON public.invoice_items FOR DELETE
+  USING (true); -- Povoliť DELETE pre všetkých (RLS je na invoices úrovni)
 
 -- ============================================
 -- COMMISSIONS TABLE - DEV MODE polícia
