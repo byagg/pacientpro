@@ -82,18 +82,14 @@ const OfficeHoursSettings = ({ receivingDoctorId }: OfficeHoursSettingsProps) =>
       }
     }
 
-    // Convert HH:MM to HH:MM:SS format for database
-    const startTimeFormatted = `${startTime}:00`;
-    const endTimeFormatted = `${endTime}:00`;
-
     await createHour.mutateAsync({
       receiving_doctor_id: receivingDoctorId,
       day_of_week: parseInt(selectedDay),
-      start_time: startTimeFormatted,
-      end_time: endTimeFormatted,
+      start_time: startTime,  // Hook pridá :00
+      end_time: endTime,      // Hook pridá :00
       slot_duration_minutes: parseInt(slotDuration),
-      break_start_time: breakStartTime || null,
-      break_end_time: breakEndTime || null,
+      break_start_time: breakStartTime || null,  // Hook pridá :00
+      break_end_time: breakEndTime || null,      // Hook pridá :00
     });
 
     // Reset form
