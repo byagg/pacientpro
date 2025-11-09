@@ -230,7 +230,7 @@ const OfficeHoursSettings = ({ receivingDoctorId }: OfficeHoursSettingsProps) =>
                         </SelectItem>
                       ))
                     ) : (
-                      <SelectItem value="" disabled>Najprv vyberte pracovné hodiny</SelectItem>
+                      <SelectItem value="none" disabled>Najprv vyberte pracovné hodiny</SelectItem>
                     )}
                   </SelectContent>
                 </Select>
@@ -253,7 +253,7 @@ const OfficeHoursSettings = ({ receivingDoctorId }: OfficeHoursSettingsProps) =>
                         </SelectItem>
                       ))
                     ) : (
-                      <SelectItem value="" disabled>Najprv vyberte začiatok pauzy</SelectItem>
+                      <SelectItem value="none" disabled>Najprv vyberte začiatok pauzy</SelectItem>
                     )}
                   </SelectContent>
                 </Select>
