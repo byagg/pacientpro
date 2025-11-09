@@ -2,11 +2,13 @@
 
 ## ⚠️ KRITICKÉ: Pred použitím DEV MODE
 
-DEV MODE teraz používa **UUID formátované mock ID**, ktoré MUSIA existovať v databáze!
+DEV MODE používa **UUID formátované mock ID** BEZ auth session, takže potrebuje:
+1. ✅ DEV profily v databáze
+2. ✅ RLS policies upravené pre DEV UUID
 
 ---
 
-## 📋 Setup v 2 krokoch:
+## 📋 Setup v 3 krokoch:
 
 ### **KROK 1: Spustite hlavné migrácie** (ak ste to ešte neurobili)
 
@@ -42,6 +44,30 @@ DEV MODE teraz používa **UUID formátované mock ID**, ktoré MUSIA existovať
    00000000-0000-0000-0000-000000000001 | odosielajuci@dev.sk  | DEV Odosielajúci Lekár | sending
    00000000-0000-0000-0000-000000000002 | prijimajuci@dev.sk   | DEV Prijímajúci Lekár  | receiving
    ```
+
+---
+
+### **KROK 3: Upravte RLS policies pre DEV MODE** ⭐ NOVÉ
+
+1. V Supabase SQL Editore (nové query)
+
+2. Skopírujte obsah súboru:
+   ```
+   add-dev-mode-rls-policies.sql
+   ```
+
+3. Vložte a kliknite **RUN**
+
+4. **Čo to robí:**
+   - Upraví RLS policies aby akceptovali DEV UUID
+   - Umožní INSERT, UPDATE, SELECT pre DEV účty
+   - Normálne účty fungujú ako predtým (cez `auth.uid()`)
+
+**Bez tohto kroku dostanete:**
+```
+Error 406: The result contains 0 rows
+PGRST116: JSON object requested, multiple (or no) rows returned
+```
 
 ---
 
