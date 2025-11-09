@@ -36,6 +36,23 @@ CREATE POLICY "DEV MODE can insert profiles"
 -- APPOINTMENTS TABLE - DEV MODE polícia
 -- ============================================
 
+DROP POLICY IF EXISTS "Angiologists can view their own appointments" ON public.appointments;
+
+CREATE POLICY "Angiologists can view their own appointments"
+  ON public.appointments FOR SELECT
+  USING (
+    auth.uid() = angiologist_id 
+    OR auth.uid() = receiving_doctor_id
+    OR angiologist_id IN (
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000002'
+    )
+    OR receiving_doctor_id IN (
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000002'
+    )
+  );
+
 DROP POLICY IF EXISTS "Angiologists can create appointments" ON public.appointments;
 
 CREATE POLICY "Angiologists can create appointments"

@@ -17,6 +17,7 @@ import PaidInvoicesList from "@/components/PaidInvoicesList";
 import ReceivingInvoiceCreator from "@/components/ReceivingInvoiceCreator";
 import IssuedInvoicesList from "@/components/IssuedInvoicesList";
 import SendingDoctorInvoiceData from "@/components/SendingDoctorInvoiceData";
+import ProfileSettings from "@/components/ProfileSettings";
 
 // 🔧 DEV MODE - Dočasne vypnutá autentifikácia pre testovanie
 const DEV_MODE = true;
@@ -155,7 +156,7 @@ const Dashboard = () => {
 
         {user?.id && (
           <Tabs defaultValue="section1" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsList className="grid w-full grid-cols-4 mb-6">
               {user.user_type === 'receiving' ? (
                 <>
                   <TabsTrigger value="section1" className="gap-2">
@@ -169,6 +170,10 @@ const Dashboard = () => {
                   <TabsTrigger value="section3" className="gap-2">
                     <FileText className="h-4 w-4" />
                     Faktúry
+                  </TabsTrigger>
+                  <TabsTrigger value="section4" className="gap-2">
+                    <Settings className="h-4 w-4" />
+                    Profil
                   </TabsTrigger>
                 </>
               ) : (
@@ -184,6 +189,10 @@ const Dashboard = () => {
                   <TabsTrigger value="section3" className="gap-2">
                     <Settings className="h-4 w-4" />
                     Nastavenia
+                  </TabsTrigger>
+                  <TabsTrigger value="section4" className="gap-2">
+                    <Settings className="h-4 w-4" />
+                    Profil
                   </TabsTrigger>
                 </>
               )}
@@ -214,6 +223,10 @@ const Dashboard = () => {
                   <ReceivingInvoiceCreator receivingDoctorId={user.id} />
                   <IssuedInvoicesList receivingDoctorId={user.id} />
                 </TabsContent>
+
+                <TabsContent value="section4" className="space-y-6">
+                  <ProfileSettings userId={user.id} />
+                </TabsContent>
               </>
             ) : (
               // Sending doctor sections
@@ -234,6 +247,10 @@ const Dashboard = () => {
 
                 <TabsContent value="section3" className="space-y-6">
                   <InvoiceDataSettings userId={user.id} />
+                </TabsContent>
+
+                <TabsContent value="section4" className="space-y-6">
+                  <ProfileSettings userId={user.id} />
                 </TabsContent>
               </>
             )}
