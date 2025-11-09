@@ -20,7 +20,8 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [bankAccount, setBankAccount] = useState("");
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
   const [ambulanceCode, setAmbulanceCode] = useState("");
 
   // Update form when profile loads
@@ -28,7 +29,8 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
     if (profile) {
       setFullName(profile.full_name || "");
       setEmail(profile.email || "");
-      setBankAccount(profile.bank_account || "");
+      setAddress(profile.address || "");
+      setPhone(profile.phone || "");
       setAmbulanceCode(profile.ambulance_code || "");
     }
   }, [profile]);
@@ -36,7 +38,8 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
   const updateProfile = useMutation({
     mutationFn: async (data: {
       full_name?: string;
-      bank_account?: string;
+      address?: string;
+      phone?: string;
       ambulance_code?: string;
     }) => {
       const { data: updated, error } = await supabase
@@ -70,7 +73,8 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
 
     await updateProfile.mutateAsync({
       full_name: fullName,
-      bank_account: bankAccount,
+      address: address,
+      phone: phone,
       ambulance_code: ambulanceCode,
     });
   };
@@ -141,16 +145,34 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="bankAccount">Bankový účet</Label>
+            <Label htmlFor="phone">Telefónne číslo</Label>
             <Input
-              id="bankAccount"
-              type="text"
-              value={bankAccount}
-              onChange={(e) => setBankAccount(e.target.value)}
-              placeholder="SK00 0000 0000 0000 0000 0000"
+              id="phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+421 XXX XXX XXX"
+              maxLength={20}
+              autoComplete="tel"
             />
             <p className="text-xs text-muted-foreground">
-              IBAN formát (používa sa na faktúrach)
+              Kontaktné telefónne číslo
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="address">Adresa</Label>
+            <Input
+              id="address"
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Ulica 123, 811 01 Bratislava"
+              maxLength={255}
+              autoComplete="street-address"
+            />
+            <p className="text-xs text-muted-foreground">
+              Adresa ambulancie alebo pracoviska
             </p>
           </div>
 

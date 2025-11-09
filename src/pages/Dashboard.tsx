@@ -13,7 +13,6 @@ import WaitingPatientsList from "@/components/WaitingPatientsList";
 import ExaminedPatientsList from "@/components/ExaminedPatientsList";
 import InvoiceDataSettings from "@/components/InvoiceDataSettings";
 import SentInvoicesList from "@/components/SentInvoicesList";
-import PaidInvoicesList from "@/components/PaidInvoicesList";
 import ReceivingInvoiceCreator from "@/components/ReceivingInvoiceCreator";
 import IssuedInvoicesList from "@/components/IssuedInvoicesList";
 import SendingDoctorInvoiceData from "@/components/SendingDoctorInvoiceData";
@@ -239,10 +238,7 @@ const Dashboard = () => {
                 </TabsContent>
 
                 <TabsContent value="section2" className="space-y-6">
-                  <div className="grid gap-6 md:grid-cols-2">
-                    <SentInvoicesList userId={user.id} />
-                    <PaidInvoicesList userId={user.id} />
-                  </div>
+                  <SentInvoicesList userId={user.id} />
                 </TabsContent>
 
                 <TabsContent value="section3" className="space-y-6">

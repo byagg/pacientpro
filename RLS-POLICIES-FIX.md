@@ -58,11 +58,14 @@ Po spustení budú fungovať:
 
 Pridaný nový tab **"Profil"** pre oboch lekárov:
 - 👤 **Celé meno** (editovateľné)
-- 📧 **Email** (read-only)
-- 🏥 **Kód ambulancie** (editovateľné)
-- 💰 **Bankový účet** (editovateľné, IBAN formát)
+- 📧 **Email** (read-only, nemožno zmeniť)
+- 🏥 **Kód ambulancie** (editovateľné, používa sa v číslach pacientov)
+- 📞 **Telefónne číslo** (editovateľné)
+- 📍 **Adresa** (editovateľné, adresa ambulancie/pracoviska)
 
 Prístup cez 4. tab "Profil" v dashboarde.
+
+**Poznámka:** Bankové a daňové údaje sú v sekcii "Nastavenia" alebo "Faktúry".
 
 ## 🚀 Poradie krokov
 
