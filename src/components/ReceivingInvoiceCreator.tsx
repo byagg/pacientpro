@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calculator, FileText, Loader2, Euro, Search, Filter, AlertCircle } from "lucide-react";
+import { FileText, Loader2, Search, Filter, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreateInvoice } from "@/hooks/use-invoices";
@@ -194,10 +194,6 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
     }
   };
 
-  const calculateTotal = () => {
-    return selectedPatients.length * PATIENT_FEE;
-  };
-
   // Listen for doctor filter events from SendingDoctorInvoiceData
   useEffect(() => {
     const handleSetDoctorFilter = (event: any) => {
@@ -311,35 +307,16 @@ const ReceivingInvoiceCreator = ({ receivingDoctorId }: ReceivingInvoiceCreatorP
               </p>
             ) : (
               <div className="space-y-6">
-                {/* Calculator */}
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Calculator className="h-5 w-5 text-primary" />
-                      <span className="font-semibold">Kalkulačka</span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSelectAll}
-                    >
-                      {selectedPatients.length === filteredPatients.length ? "Zrušiť výber" : "Vybrať všetkých"}
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between text-lg">
-                    <span className="text-muted-foreground">
-                      {selectedPatients.length} pacientov × {PATIENT_FEE} €
-                    </span>
-                    <div className="flex items-center gap-1 font-bold text-primary text-2xl">
-                      <Euro className="h-6 w-6" />
-                      {calculateTotal().toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-
                 {/* Results info */}
-                <div className="text-sm text-muted-foreground">
-                  Zobrazených: {filteredPatients.length} z {patients.length} pacientov
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>Zobrazených: {filteredPatients.length} z {patients.length} pacientov</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAll}
+                  >
+                    {selectedPatients.length === filteredPatients.length ? "Zrušiť výber" : "Vybrať všetkých"}
+                  </Button>
                 </div>
 
                 {/* Patients grouped by sending doctor */}
