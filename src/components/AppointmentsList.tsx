@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, CheckCircle2, DollarSign, Trash2, User } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, DollarSign, Trash2, User, Send } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useAppointments, useDeleteAppointment } from "@/hooks/use-appointments";
@@ -129,6 +129,14 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
                         </span>
                       </div>
                     )}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                      <Send className="h-4 w-4" />
+                      <span>
+                          Odoslaná: {format(new Date(appointment.created_at), "PPp", {
+                            locale: sk,
+                          })}
+                        </span>
+                      </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                       <Clock className="h-4 w-4" />
                       <span>
