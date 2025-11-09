@@ -120,8 +120,8 @@ const Auth = () => {
           </CardTitle>
           <CardDescription>
             {isLogin
-              ? "Prihláste sa do systému rezervácií"
-              : "Vytvorte si nový účet angiológa"}
+              ? "Prihláste sa do systému PACIENT-PRO"
+              : "Vytvorte si nový účet v systéme PACIENT-PRO"}
           </CardDescription>
         </CardHeader>
         <CardContent>

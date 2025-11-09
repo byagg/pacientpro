@@ -15,7 +15,7 @@ const Index = () => {
             </div>
           </div>
           <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            ANGIOPLUS
+            PACIENT-PRO
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
             Profesionálny systém pre správu rezervácií a manipulačných poplatkov angiológov

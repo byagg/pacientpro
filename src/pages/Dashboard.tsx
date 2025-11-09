@@ -115,7 +115,7 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <Calendar className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">ANGIOPLUS</h1>
+            <h1 className="text-2xl font-bold">PACIENT-PRO</h1>
             {DEV_MODE && (
               <Badge variant="outline" className="ml-2 text-xs bg-orange-100 text-orange-700 border-orange-300">
                 DEV
