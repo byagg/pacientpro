@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Calendar, UserCheck, UserPlus, ClipboardList, FileText, Settings, Clock, Users, Code } from "lucide-react";
+import { LogOut, Calendar, UserCheck, UserPlus, ClipboardList, FileText, Settings, Clock, Users, Code, User as UserIcon } from "lucide-react";
 import AppointmentForm from "@/components/AppointmentForm";
 import AppointmentsList from "@/components/AppointmentsList";
 import OfficeHoursSettings from "@/components/OfficeHoursSettings";
@@ -171,7 +171,7 @@ const Dashboard = () => {
                     Faktúry
                   </TabsTrigger>
                   <TabsTrigger value="section4" className="gap-2">
-                    <User className="h-4 w-4" />
+                    <UserIcon className="h-4 w-4" />
                     Profil
                   </TabsTrigger>
                 </>
@@ -186,7 +186,7 @@ const Dashboard = () => {
                     Faktúry
                   </TabsTrigger>
                   <TabsTrigger value="section3" className="gap-2">
-                    <User className="h-4 w-4" />
+                    <UserIcon className="h-4 w-4" />
                     Profil
                   </TabsTrigger>
                 </>
