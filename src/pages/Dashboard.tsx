@@ -11,6 +11,7 @@ import AppointmentsList from "@/components/AppointmentsList";
 import OfficeHoursSettings from "@/components/OfficeHoursSettings";
 import WaitingPatientsList from "@/components/WaitingPatientsList";
 import ExaminedPatientsList from "@/components/ExaminedPatientsList";
+import InvoicedPatientsList from "@/components/InvoicedPatientsList";
 import InvoiceDataSettings from "@/components/InvoiceDataSettings";
 import SentInvoicesList from "@/components/SentInvoicesList";
 import ReceivingInvoiceCreator from "@/components/ReceivingInvoiceCreator";
@@ -199,6 +200,7 @@ const Dashboard = () => {
                 <TabsContent value="section1" className="space-y-3">
                   <WaitingPatientsList receivingDoctorId={user.id} />
                   <ExaminedPatientsList receivingDoctorId={user.id} />
+                  <InvoicedPatientsList receivingDoctorId={user.id} />
                 </TabsContent>
 
                 <TabsContent value="section2" className="space-y-3">

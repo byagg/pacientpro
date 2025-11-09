@@ -1,11 +1,12 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Printer, X } from "lucide-react";
+import { FileText, Printer, X, Download } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDoctorName } from "@/lib/utils-doctors";
+import html2pdf from "html2pdf.js";
 
 interface InvoicePreviewProps {
   invoiceId: string;
@@ -143,6 +144,30 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
     window.print();
   };
 
+  const handleDownloadPDF = () => {
+    const element = document.getElementById('invoice-content');
+    if (!element) return;
+
+    const opt = {
+      margin: [8, 8, 8, 8], // mm
+      filename: `${invoice?.invoice_number || 'faktura'}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { 
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      },
+      jsPDF: { 
+        unit: 'mm', 
+        format: 'a4', 
+        orientation: 'portrait',
+        compress: true,
+      },
+    };
+
+    html2pdf().set(opt).from(element).save();
+  };
+
   if (loadingInvoice || loadingItems || !invoice) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -212,6 +237,10 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
               Faktúra {invoice.invoice_number}
             </DialogTitle>
             <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
+                <Download className="mr-2 h-4 w-4" />
+                Stiahnuť PDF
+              </Button>
               <Button variant="outline" size="sm" onClick={handlePrint}>
                 <Printer className="mr-2 h-4 w-4" />
                 Tlačiť
