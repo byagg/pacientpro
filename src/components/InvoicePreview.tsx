@@ -371,24 +371,39 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
             </div>
           </div>
 
-          {/* Signature - Compact */}
-          {invoice.receiving_doctor_signature && (
-            <div className="flex justify-end mt-2 mb-1 print:mt-1.5 print:mb-0.5">
-              <div className="text-center">
-                <img 
-                  src={invoice.receiving_doctor_signature} 
-                  alt="Podpis" 
-                  className="max-h-10 mb-0.5 border-b border-gray-400 print:max-h-8"
-                />
-                <p className="text-[9px] text-gray-600 print:text-[8px]">Podpis dodávateľa</p>
-              </div>
+          {/* Signatures - Compact */}
+          {(invoice.receiving_doctor_signature || invoice.sending_doctor_signature) && (
+            <div className="flex justify-end gap-8 mt-2 mb-1 print:mt-1.5 print:mb-0.5 print:gap-4">
+              {/* Receiving Doctor Signature (Dodávateľ) */}
+              {invoice.receiving_doctor_signature && (
+                <div className="text-center">
+                  <img 
+                    src={invoice.receiving_doctor_signature} 
+                    alt="Podpis dodávateľa" 
+                    className="max-h-10 mb-0.5 mx-auto border-b border-gray-400 print:max-h-8"
+                  />
+                  <p className="text-[9px] text-gray-600 print:text-[8px]">Podpis dodávateľa</p>
+                </div>
+              )}
+              
+              {/* Sending Doctor Signature (Odberateľ) */}
+              {invoice.sending_doctor_signature && (
+                <div className="text-center">
+                  <img 
+                    src={invoice.sending_doctor_signature} 
+                    alt="Podpis odberateľa" 
+                    className="max-h-10 mb-0.5 mx-auto border-b border-gray-400 print:max-h-8"
+                  />
+                  <p className="text-[9px] text-gray-600 print:text-[8px]">Podpis odberateľa</p>
+                </div>
+              )}
             </div>
           )}
 
           {/* Footer - Compact */}
           <div className="text-[9px] text-gray-500 text-center pt-1 border-t border-gray-200 print:text-[8px] print:pt-0.5">
             <p>
-              {invoice.receiving_doctor_signature 
+              {invoice.receiving_doctor_signature || invoice.sending_doctor_signature
                 ? "Faktúra bola vystavená elektronicky." 
                 : "Faktúra bola vystavená elektronicky a je platná bez podpisu."}
             </p>

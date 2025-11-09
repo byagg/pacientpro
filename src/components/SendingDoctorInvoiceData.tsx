@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, MapPin, CreditCard, Building2, FileText, ChevronDown, Plus } from "lucide-react";
+import { User, MapPin, CreditCard, Building2, FileText, ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,7 @@ interface SendingDoctor {
 
 const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDataProps) => {
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
+  const [isOpen, setIsOpen] = useState(false);
 
   // Fetch all sending doctors who have sent patients to this receiving doctor
   // Auto-refresh every 30 seconds to get updated list
@@ -102,26 +104,36 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
   const hasCompleteData = profile?.invoice_name && profile?.invoice_address && profile?.bank_account;
 
   return (
-    <Card className="shadow-card border-l-4 border-l-blue-500">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <User className="h-5 w-5 text-blue-600" />
-            <CardTitle>Fakturačné údaje odosielateľa</CardTitle>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="shadow-card border-l-4 border-l-blue-500">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <User className="h-5 w-5 text-blue-600" />
+              <CardTitle>Fakturačné údaje odosielateľa</CardTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              {hasCompleteData ? (
+                <Badge className="bg-green-100 text-green-700">Kompletné</Badge>
+              ) : (
+                <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+                  Nekompletné
+                </Badge>
+              )}
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-9 p-0">
+                  {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  <span className="sr-only">Toggle</span>
+                </Button>
+              </CollapsibleTrigger>
+            </div>
           </div>
-          {hasCompleteData ? (
-            <Badge className="bg-green-100 text-green-700">Kompletné</Badge>
-          ) : (
-            <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
-              Nekompletné
-            </Badge>
-          )}
-        </div>
-        <CardDescription>
-          Údaje odosielajúceho lekára pre faktúru (dodávateľ)
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+          <CardDescription>
+            Údaje odosielajúceho lekára pre faktúru (dodávateľ)
+          </CardDescription>
+        </CardHeader>
+        <CollapsibleContent>
+          <CardContent className="space-y-4">
         {/* Error message */}
         {loadingError && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -285,8 +297,10 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 };
 
