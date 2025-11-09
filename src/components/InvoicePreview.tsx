@@ -1,12 +1,78 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Printer, X, Download } from "lucide-react";
+import { FileText, Download } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDoctorName } from "@/lib/utils-doctors";
 import html2pdf from "html2pdf.js";
+
+// Function to convert number to Slovak words
+const numberToWords = (num: number): string => {
+  if (num === 0) return "nula";
+  
+  const ones = ["", "jeden", "dva", "tri", "štyri", "päť", "šesť", "sedem", "osem", "deväť"];
+  const teens = ["desať", "jedenásť", "dvanásť", "trinásť", "štrnásť", "pätnásť", "šestnásť", "sedemnásť", "osemnásť", "devätnásť"];
+  const tens = ["", "", "dvadsať", "tridsať", "štyridsať", "päťdesiat", "šesťdesiat", "sedemdesiat", "osemdesiat", "deväťdesiat"];
+  const hundreds = ["", "sto", "dvesto", "tristo", "štyristo", "päťsto", "šesťsto", "sedemsto", "osemsto", "deväťsto"];
+  const thousands = ["", "tisíc", "tisíc", "tisíc"];
+  
+  const convertHundreds = (n: number): string => {
+    if (n === 0) return "";
+    
+    let result = "";
+    const h = Math.floor(n / 100);
+    const t = Math.floor((n % 100) / 10);
+    const o = n % 10;
+    
+    if (h > 0) result += hundreds[h];
+    
+    if (t === 1) {
+      result += (result ? "" : "") + teens[o];
+    } else {
+      if (t > 0) result += (result ? "" : "") + tens[t];
+      if (o > 0) result += (result ? "" : "") + ones[o];
+    }
+    
+    return result;
+  };
+  
+  const intPart = Math.floor(num);
+  const th = Math.floor(intPart / 1000);
+  const hund = intPart % 1000;
+  
+  let result = "";
+  
+  if (th > 0) {
+    if (th === 1) {
+      result = "tisíc";
+    } else if (th < 5) {
+      result = convertHundreds(th) + "tisíc";
+    } else {
+      result = convertHundreds(th) + "tisíc";
+    }
+  }
+  
+  if (hund > 0) {
+    result += convertHundreds(hund);
+  }
+  
+  return result || "nula";
+};
+
+const amountToWords = (amount: string): string => {
+  const num = parseFloat(amount);
+  const euros = Math.floor(num);
+  const cents = Math.round((num - euros) * 100);
+  
+  let result = numberToWords(euros) + " eur";
+  if (cents > 0) {
+    result += " a " + numberToWords(cents) + " " + (cents === 1 ? "cent" : cents < 5 ? "centy" : "centov");
+  }
+  
+  return result;
+};
 
 interface InvoicePreviewProps {
   invoiceId: string;
@@ -32,6 +98,7 @@ interface InvoiceData {
   sending_doctor_dic: string | null;
   sending_doctor_bank_account: string | null;
   sending_doctor_signature: string | null;
+  sending_doctor_vat_payer: string | null;
   
   // Receiving doctor (prijímajúci lekár - DODÁVATEĽ, poskytol službu vyšetrenia)
   receiving_doctor_name: string | null;
@@ -40,6 +107,7 @@ interface InvoiceData {
   receiving_doctor_dic: string | null;
   receiving_doctor_bank_account: string | null; // IBAN dodávateľa (kam platiť)
   receiving_doctor_signature: string | null; // Podpis dodávateľa
+  receiving_doctor_vat_payer: string | null;
 }
 
 interface InvoiceItem {
@@ -71,7 +139,8 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
             invoice_ico,
             invoice_dic,
             bank_account,
-            signature_image
+            signature_image,
+            vat_payer_status
           ),
           receiving_doctor:profiles!invoices_receiving_doctor_id_fkey(
             full_name,
@@ -80,7 +149,8 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
             invoice_ico,
             invoice_dic,
             bank_account,
-            signature_image
+            signature_image,
+            vat_payer_status
           )
         `)
         .eq('id', invoiceId)
@@ -99,12 +169,14 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
         sending_doctor_dic: data.sending_doctor?.invoice_dic,
         sending_doctor_bank_account: data.sending_doctor?.bank_account,
         sending_doctor_signature: data.sending_doctor?.signature_image,
+        sending_doctor_vat_payer: data.sending_doctor?.vat_payer_status,
         receiving_doctor_name: data.receiving_doctor?.invoice_name || data.receiving_doctor?.full_name,
         receiving_doctor_address: data.receiving_doctor?.invoice_address,
         receiving_doctor_ico: data.receiving_doctor?.invoice_ico,
         receiving_doctor_dic: data.receiving_doctor?.invoice_dic,
         receiving_doctor_bank_account: data.receiving_doctor?.bank_account,
         receiving_doctor_signature: data.receiving_doctor?.signature_image,
+        receiving_doctor_vat_payer: data.receiving_doctor?.vat_payer_status,
       };
       
       console.log('Invoice data loaded:', result);
@@ -139,10 +211,6 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
     },
     enabled: !!invoiceId && open,
   });
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   const handleDownloadPDF = () => {
     const element = document.getElementById('invoice-content');
@@ -236,16 +304,10 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
               <FileText className="h-5 w-5" />
               Faktúra {invoice.invoice_number}
             </DialogTitle>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
-                <Download className="mr-2 h-4 w-4" />
-                Stiahnuť PDF
-              </Button>
-              <Button variant="outline" size="sm" onClick={handlePrint}>
-                <Printer className="mr-2 h-4 w-4" />
-                Tlačiť
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
+              <Download className="mr-2 h-4 w-4" />
+              Stiahnuť PDF
+            </Button>
           </div>
         </DialogHeader>
 
@@ -279,6 +341,11 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
                     <span className="text-gray-700">DIČ: {invoice.receiving_doctor_dic}</span>
                   )}
                 </div>
+                {invoice.receiving_doctor_vat_payer && (
+                  <p className="text-gray-700 mt-0.5">
+                    {invoice.receiving_doctor_vat_payer === 'yes' ? 'Platca DPH' : invoice.receiving_doctor_vat_payer === 'no' ? 'Nie platca DPH' : ''}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -301,6 +368,11 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
                       <span className="text-gray-700">DIČ: {invoice.sending_doctor_dic}</span>
                     )}
                   </div>
+                  {invoice.sending_doctor_vat_payer && (
+                    <p className="text-gray-700 mt-0.5">
+                      {invoice.sending_doctor_vat_payer === 'yes' ? 'Platca DPH' : invoice.sending_doctor_vat_payer === 'no' ? 'Nie platca DPH' : ''}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -363,10 +435,13 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
 
           {/* Total - Compact */}
           <div className="flex justify-end mb-2 print:mb-1">
-            <div className="w-48 print:w-40">
+            <div className="w-full max-w-md print:max-w-sm">
               <div className="flex justify-between py-1 border-t-2 border-gray-400 print:py-0.5">
                 <span className="text-xs font-semibold print:text-[10px]">Celkom k úhrade:</span>
                 <span className="text-base font-bold print:text-sm">{invoice.total_amount} €</span>
+              </div>
+              <div className="text-[9px] text-gray-600 text-right mt-0.5 italic print:text-[8px]">
+                Slovom: {amountToWords(invoice.total_amount)}
               </div>
             </div>
           </div>

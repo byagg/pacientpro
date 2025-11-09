@@ -23,6 +23,7 @@ interface DoctorProfile {
   bank_account: string | null;
   invoice_ico: string | null;
   invoice_dic: string | null;
+  vat_payer_status: string | null;
 }
 
 interface SendingDoctor {
@@ -84,7 +85,7 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email, invoice_name, invoice_address, bank_account, invoice_ico, invoice_dic')
+        .select('id, full_name, email, invoice_name, invoice_address, bank_account, invoice_ico, invoice_dic, vat_payer_status')
         .eq('id', selectedDoctorId)
         .single();
 
@@ -287,6 +288,16 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
                 </div>
               )}
             </div>
+
+            {profile.vat_payer_status && profile.vat_payer_status !== 'not_applicable' && (
+              <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-muted-foreground">Platca DPH</p>
+                  <p className="text-base">{profile.vat_payer_status === 'yes' ? 'Áno' : 'Nie'}</p>
+                </div>
+              </div>
+            )}
 
             {!hasCompleteData && (
               <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">

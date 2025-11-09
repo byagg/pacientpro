@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProfile } from "@/hooks/use-profile";
 import { User, Loader2, Save, Upload, X, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +37,7 @@ const profileSchema = z.object({
     { message: "DIČ musí obsahovať presne 10 číslic" }
   ),
   signature_image: z.string().nullable().optional(),
+  vat_payer_status: z.enum(['yes', 'no', 'not_applicable']).nullable().optional(),
 });
 
 const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
@@ -55,6 +57,7 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
   const [invoiceIco, setInvoiceIco] = useState("");
   const [invoiceDic, setInvoiceDic] = useState("");
   const [signatureImage, setSignatureImage] = useState("");
+  const [vatPayerStatus, setVatPayerStatus] = useState<'yes' | 'no' | 'not_applicable'>('not_applicable');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Update form when profile loads
@@ -71,6 +74,7 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
       setInvoiceIco(profile.invoice_ico || "");
       setInvoiceDic(profile.invoice_dic || "");
       setSignatureImage(profile.signature_image || "");
+      setVatPayerStatus((profile.vat_payer_status as 'yes' | 'no' | 'not_applicable') || 'not_applicable');
     }
   }, [profile]);
 
@@ -159,6 +163,7 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
         invoice_ico: invoiceIco || null,
         invoice_dic: invoiceDic || null,
         signature_image: signatureImage || null,
+        vat_payer_status: vatPayerStatus,
       };
 
       // Validácia
@@ -422,6 +427,22 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
                   )}
                   <p className="text-xs text-muted-foreground">10 číslic</p>
                 </div>
+              </div>
+
+              {/* Platca DPH */}
+              <div className="space-y-2 border-t pt-2 mt-2">
+                <Label htmlFor="vatPayerStatus">Platca DPH</Label>
+                <Select value={vatPayerStatus} onValueChange={(value: 'yes' | 'no' | 'not_applicable') => setVatPayerStatus(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Vyberte status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yes">Áno - Platca DPH</SelectItem>
+                    <SelectItem value="no">Nie - Nie platca DPH</SelectItem>
+                    <SelectItem value="not_applicable">Neaplikovateľné</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Tento údaj sa zobrazí na faktúre</p>
               </div>
 
               {/* Podpis na faktúru */}
