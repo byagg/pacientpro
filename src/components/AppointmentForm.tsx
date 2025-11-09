@@ -131,7 +131,9 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
         throw new Error("Neplatný dátum rezervácie");
       }
 
-      const patientNumber = generatePatientNumber(ambulanceCode, finalAppointmentDate);
+      // Generate patient number from current time (not appointment time)
+      const now = new Date();
+      const patientNumber = generatePatientNumber(ambulanceCode, now.toISOString());
 
       // Extract receiving_doctor_id from selected slot (for sending doctors)
       let receivingDoctorId: string | null = null;
@@ -174,7 +176,7 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
           <CardTitle>Nová rezervácia</CardTitle>
         </div>
         <CardDescription>
-          Číslo pacienta sa vygeneruje automaticky z kódu ambulancie a času vyšetrenia
+          Číslo pacienta sa vygeneruje automaticky z kódu ambulancie a aktuálneho času
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -190,7 +192,7 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Číslo pacienta: {ambulanceCode && (userType === 'receiving' ? appointmentDate : selectedSlot) ? generatePatientNumber(ambulanceCode, userType === 'receiving' ? appointmentDate : selectedSlot) : "vyberte dátum"}
+              Náhľad čísla pacienta: {ambulanceCode ? generatePatientNumber(ambulanceCode, new Date().toISOString()) : "XX-YYMMDD-HHMM"} (generuje sa pri uložení)
             </p>
           </div>
 
