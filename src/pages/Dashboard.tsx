@@ -155,7 +155,7 @@ const Dashboard = () => {
 
         {user?.id && (
           <Tabs defaultValue="section1" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsList className={`grid w-full ${user.user_type === 'receiving' ? 'grid-cols-4' : 'grid-cols-3'} mb-6`}>
               {user.user_type === 'receiving' ? (
                 <>
                   <TabsTrigger value="section1" className="gap-2">
@@ -171,7 +171,7 @@ const Dashboard = () => {
                     Faktúry
                   </TabsTrigger>
                   <TabsTrigger value="section4" className="gap-2">
-                    <Settings className="h-4 w-4" />
+                    <User className="h-4 w-4" />
                     Profil
                   </TabsTrigger>
                 </>
@@ -186,11 +186,7 @@ const Dashboard = () => {
                     Faktúry
                   </TabsTrigger>
                   <TabsTrigger value="section3" className="gap-2">
-                    <Settings className="h-4 w-4" />
-                    Nastavenia
-                  </TabsTrigger>
-                  <TabsTrigger value="section4" className="gap-2">
-                    <Settings className="h-4 w-4" />
+                    <User className="h-4 w-4" />
                     Profil
                   </TabsTrigger>
                 </>

@@ -82,6 +82,18 @@ CREATE POLICY "Angiologists can update their own appointments"
     )
   );
 
+DROP POLICY IF EXISTS "Angiologists can delete appointments" ON public.appointments;
+
+CREATE POLICY "Angiologists can delete appointments"
+  ON public.appointments FOR DELETE
+  USING (
+    auth.uid() = angiologist_id
+    OR angiologist_id IN (
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000002'
+    )
+  );
+
 -- ============================================
 -- OFFICE_HOURS TABLE - DEV MODE polícia
 -- ============================================
@@ -184,11 +196,34 @@ CREATE POLICY "Users can delete invoice items"
 -- COMMISSIONS TABLE - DEV MODE polícia
 -- ============================================
 
--- Commissions sú read-only v aplikácii, ale pre istotu:
-DROP POLICY IF EXISTS "DEV MODE can view commissions" ON public.commissions;
+DROP POLICY IF EXISTS "Users can view commissions" ON public.commissions;
 
-CREATE POLICY "DEV MODE can view commissions"
+CREATE POLICY "Users can view commissions"
   ON public.commissions FOR SELECT
+  USING (
+    auth.uid() = angiologist_id
+    OR angiologist_id IN (
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000002'
+    )
+  );
+
+DROP POLICY IF EXISTS "Users can create commissions" ON public.commissions;
+
+CREATE POLICY "Users can create commissions"
+  ON public.commissions FOR INSERT
+  WITH CHECK (
+    auth.uid() = angiologist_id
+    OR angiologist_id IN (
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000002'
+    )
+  );
+
+DROP POLICY IF EXISTS "Users can delete commissions" ON public.commissions;
+
+CREATE POLICY "Users can delete commissions"
+  ON public.commissions FOR DELETE
   USING (
     auth.uid() = angiologist_id
     OR angiologist_id IN (
