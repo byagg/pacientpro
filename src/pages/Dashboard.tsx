@@ -196,52 +196,40 @@ const Dashboard = () => {
             {user.user_type === 'receiving' ? (
               // Receiving doctor sections
               <>
-                <TabsContent value="section1" className="space-y-6">
+                <TabsContent value="section1" className="space-y-3">
                   <WaitingPatientsList receivingDoctorId={user.id} />
                   <ExaminedPatientsList receivingDoctorId={user.id} />
                 </TabsContent>
 
-                <TabsContent value="section2" className="space-y-6">
+                <TabsContent value="section2" className="space-y-3">
                   <OfficeHoursSettings receivingDoctorId={user.id} />
                 </TabsContent>
 
-                <TabsContent value="section3" className="space-y-6">
-                  <div className="grid gap-6 md:grid-cols-2">
-                    <InvoiceDataSettings 
-                      userId={user.id}
-                      title="Vaše fakturačné údaje"
-                      description="Údaje prijímajúceho lekára (odberateľ)"
-                      borderColor="border-l-green-500"
-                    />
-                    <SendingDoctorInvoiceData receivingDoctorId={user.id} />
-                  </div>
+                <TabsContent value="section3" className="space-y-3">
+                  <SendingDoctorInvoiceData receivingDoctorId={user.id} />
                   <ReceivingInvoiceCreator receivingDoctorId={user.id} />
                   <IssuedInvoicesList receivingDoctorId={user.id} />
                 </TabsContent>
 
-                <TabsContent value="section4" className="space-y-6">
+                <TabsContent value="section4" className="space-y-3">
                   <ProfileSettings userId={user.id} />
                 </TabsContent>
               </>
             ) : (
               // Sending doctor sections
               <>
-                <TabsContent value="section1" className="space-y-6">
-                  <div className="grid gap-6 md:grid-cols-2">
+                <TabsContent value="section1" className="space-y-3">
+                  <div className="grid gap-3 md:grid-cols-2">
                     <AppointmentForm userId={user.id} userType={user.user_type} />
                     <AppointmentsList userId={user.id} />
                   </div>
                 </TabsContent>
 
-                <TabsContent value="section2" className="space-y-6">
+                <TabsContent value="section2" className="space-y-3">
                   <SentInvoicesList userId={user.id} />
                 </TabsContent>
 
-                <TabsContent value="section3" className="space-y-6">
-                  <InvoiceDataSettings userId={user.id} />
-                </TabsContent>
-
-                <TabsContent value="section4" className="space-y-6">
+                <TabsContent value="section3" className="space-y-3">
                   <ProfileSettings userId={user.id} />
                 </TabsContent>
               </>

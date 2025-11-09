@@ -206,8 +206,8 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
           Spravujte svoje osobné údaje, kontakt a fakturačné informácie
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <CardContent className="py-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="fullName">Celé meno *</Label>
             <Input
@@ -235,7 +235,7 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ambulanceCode">Kód ambulancie</Label>
+            <Label htmlFor="ambulanceCode">Kód ambulancie (voliteľné)</Label>
             <Input
               id="ambulanceCode"
               type="text"
@@ -250,7 +250,7 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Telefónne číslo</Label>
+            <Label htmlFor="phone">Telefónne číslo (voliteľné)</Label>
             <Input
               id="phone"
               type="tel"
@@ -266,7 +266,7 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="address">Adresa</Label>
+            <Label htmlFor="address">Adresa (voliteľné)</Label>
             <Input
               id="address"
               type="text"
@@ -282,12 +282,12 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
           </div>
 
           {/* Fakturačné údaje - separator */}
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4">Fakturačné údaje</h3>
+          <div className="border-t pt-3 mt-3">
+            <h3 className="text-base font-semibold mb-2">Fakturačné údaje</h3>
             
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div className="space-y-2">
-                <Label htmlFor="invoiceName">Meno / Názov firmy na faktúre</Label>
+                <Label htmlFor="invoiceName">Meno / Názov firmy na faktúre (voliteľné)</Label>
                 <Input
                   id="invoiceName"
                   type="text"
@@ -312,7 +312,7 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="invoiceAddress">Fakturačná adresa</Label>
+                <Label htmlFor="invoiceAddress">Fakturačná adresa (voliteľné)</Label>
                 <Textarea
                   id="invoiceAddress"
                   value={invoiceAddress}
@@ -337,7 +337,7 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="bankAccount">Bankový účet (IBAN)</Label>
+                <Label htmlFor="bankAccount">Bankový účet (IBAN) (voliteľné)</Label>
                 <Input
                   id="bankAccount"
                   value={bankAccount}
@@ -370,7 +370,7 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="invoiceIco">IČO</Label>
+                  <Label htmlFor="invoiceIco">IČO (voliteľné)</Label>
                   <Input
                     id="invoiceIco"
                     value={invoiceIco}
@@ -425,7 +425,7 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
               </div>
 
               {/* Podpis na faktúru */}
-              <div className="space-y-2 border-t pt-4">
+              <div className="space-y-2 border-t pt-2 mt-2">
                 <Label>Podpis na faktúru</Label>
                 <div className="flex items-center gap-4">
                   <input
@@ -474,7 +474,7 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
             </div>
           </div>
 
-          <div className="pt-4 border-t">
+          <div className="pt-3 border-t mt-3">
             <Button
               type="submit"
               disabled={updateProfile.isPending}
