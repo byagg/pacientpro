@@ -144,6 +144,7 @@ const Auth = () => {
                   placeholder="Ing. Peter Novák"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
+                  autoComplete="name"
                   required={!isLogin}
                   maxLength={100}
                 />
@@ -157,6 +158,7 @@ const Auth = () => {
                 placeholder="vas.email@priklad.sk"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
                 required
                 maxLength={255}
               />

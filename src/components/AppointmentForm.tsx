@@ -221,6 +221,12 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
           ) : (
             // Sending doctor: calendar + slot selector
             <>
+              {availableDatesForCalendar.length === 0 && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-200">
+                  <p className="font-semibold mb-1">⚠️ Žiadne dostupné termíny</p>
+                  <p>Momentálne nie sú dostupné žiadne termíny na rezerváciu. Prijímajúci lekári ešte nenastavili svoje ordinačné hodiny.</p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Dátum vyšetrenia *</Label>
                 <Calendar
