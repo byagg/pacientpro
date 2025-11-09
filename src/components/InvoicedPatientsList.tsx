@@ -51,27 +51,31 @@ const InvoicedPatientsList = ({ receivingDoctorId }: InvoicedPatientsListProps) 
             profiles!appointments_angiologist_id_fkey(full_name)
           )
         `)
-        .eq('invoices.receiving_doctor_id', receivingDoctorId)
-        .order('invoices.issue_date', { ascending: false });
+        .eq('invoices.receiving_doctor_id', receivingDoctorId);
 
       if (error) {
         console.error('Error fetching invoiced patients:', error);
         throw error;
       }
 
-      // Map data to InvoicedPatient format
-      const result: InvoicedPatient[] = (invoiceData || []).map((item: any) => ({
-        id: item.appointments.id,
-        patient_number: item.appointments.patient_number,
-        angiologist_id: item.appointments.angiologist_id,
-        sending_doctor_name: item.appointments.profiles?.full_name || 'Neznámy',
-        appointment_date: item.appointments.appointment_date,
-        examined_at: item.appointments.examined_at,
-        procedure_type: item.appointments.notes || '',
-        invoice_number: item.invoices.invoice_number,
-        invoice_date: item.invoices.issue_date,
-        invoice_id: item.invoices.id,
-      }));
+      // Map data to InvoicedPatient format and sort by invoice date (newest first)
+      const result: InvoicedPatient[] = (invoiceData || [])
+        .map((item: any) => ({
+          id: item.appointments.id,
+          patient_number: item.appointments.patient_number,
+          angiologist_id: item.appointments.angiologist_id,
+          sending_doctor_name: item.appointments.profiles?.full_name || 'Neznámy',
+          appointment_date: item.appointments.appointment_date,
+          examined_at: item.appointments.examined_at,
+          procedure_type: item.appointments.notes || '',
+          invoice_number: item.invoices.invoice_number,
+          invoice_date: item.invoices.issue_date,
+          invoice_id: item.invoices.id,
+        }))
+        .sort((a, b) => {
+          // Sort by invoice date, newest first
+          return new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime();
+        });
 
       console.log('Invoiced patients query result:', result.length, 'patients');
       return result;
