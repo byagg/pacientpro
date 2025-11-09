@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Calendar, UserCheck, UserPlus, ClipboardList, FileText, Settings, Clock, Users } from "lucide-react";
+import { LogOut, Calendar, UserCheck, UserPlus, ClipboardList, FileText, Settings, Clock, Users, Code } from "lucide-react";
 import AppointmentForm from "@/components/AppointmentForm";
 import AppointmentsList from "@/components/AppointmentsList";
 import OfficeHoursSettings from "@/components/OfficeHoursSettings";
@@ -18,30 +18,55 @@ import ReceivingInvoiceCreator from "@/components/ReceivingInvoiceCreator";
 import IssuedInvoicesList from "@/components/IssuedInvoicesList";
 import SendingDoctorInvoiceData from "@/components/SendingDoctorInvoiceData";
 
+// 🔧 DEV MODE - Dočasne vypnutá autentifikácia pre testovanie
+const DEV_MODE = true;
+
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [devUserType, setDevUserType] = useState<'sending' | 'receiving'>('sending');
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check for existing session
-    const session = auth.getSession();
-    if (session) {
-      setUser(session.user);
+    if (DEV_MODE) {
+      // DEV MODE: Vytvor mock používateľa
+      const mockUser: User = {
+        id: devUserType === 'sending' ? 'dev-sending-001' : 'dev-receiving-001',
+        email: devUserType === 'sending' ? 'odosielajuci@dev.sk' : 'prijimajuci@dev.sk',
+        full_name: devUserType === 'sending' ? 'DEV Odosielajúci Lekár' : 'DEV Prijímajúci Lekár',
+        user_type: devUserType,
+        ambulance_code: devUserType === 'sending' ? 'OD' : 'PJ',
+      };
+      setUser(mockUser);
+      setLoading(false);
     } else {
-      navigate("/auth");
+      // Normálny režim: Kontrola session
+      const session = auth.getSession();
+      if (session) {
+        setUser(session.user);
+      } else {
+        navigate("/auth");
+      }
+      setLoading(false);
     }
-    setLoading(false);
-  }, [navigate]);
+  }, [navigate, devUserType]);
 
   const handleLogout = () => {
-    auth.signOut();
-    toast({
-      title: "Odhlásenie úspešné",
-      description: "Dovidenia!",
-    });
-    navigate("/auth");
+    if (DEV_MODE) {
+      toast({
+        title: "DEV MODE ukončený",
+        description: "Presmerovanie na prihlásenie...",
+      });
+      navigate("/auth");
+    } else {
+      auth.signOut();
+      toast({
+        title: "Odhlásenie úspešné",
+        description: "Dovidenia!",
+      });
+      navigate("/auth");
+    }
   };
 
   if (loading) {
@@ -54,15 +79,50 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted">
+      {/* 🔧 DEV MODE Panel */}
+      {DEV_MODE && (
+        <div className="bg-orange-500 text-white px-4 py-2 text-center text-sm font-semibold">
+          <div className="container mx-auto flex items-center justify-center gap-4">
+            <Code className="h-4 w-4" />
+            <span>DEV MODE</span>
+            <span className="text-orange-200">|</span>
+            <span>Prepnúť rolu:</span>
+            <Button
+              size="sm"
+              variant={devUserType === 'sending' ? 'secondary' : 'outline'}
+              onClick={() => setDevUserType('sending')}
+              className={devUserType === 'sending' ? 'bg-white text-orange-500 hover:bg-white/90' : 'bg-orange-600 hover:bg-orange-700 border-white/20'}
+            >
+              <UserPlus className="h-3 w-3 mr-1" />
+              Odosielajúci
+            </Button>
+            <Button
+              size="sm"
+              variant={devUserType === 'receiving' ? 'secondary' : 'outline'}
+              onClick={() => setDevUserType('receiving')}
+              className={devUserType === 'receiving' ? 'bg-white text-orange-500 hover:bg-white/90' : 'bg-orange-600 hover:bg-orange-700 border-white/20'}
+            >
+              <UserCheck className="h-3 w-3 mr-1" />
+              Prijímajúci
+            </Button>
+          </div>
+        </div>
+      )}
+
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <Calendar className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-bold">ANGIOPLUS</h1>
+            {DEV_MODE && (
+              <Badge variant="outline" className="ml-2 text-xs bg-orange-100 text-orange-700 border-orange-300">
+                DEV
+              </Badge>
+            )}
           </div>
           <Button variant="outline" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
-            Odhlásiť sa
+            {DEV_MODE ? 'Zavrieť DEV' : 'Odhlásiť sa'}
           </Button>
         </div>
       </header>

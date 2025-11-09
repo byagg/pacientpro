@@ -35,11 +35,16 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const session = auth.getSession();
+    // Check if user is already logged in (skip in dev mode from URL)
+    const urlParams = new URLSearchParams(window.location.search);
+    const devMode = urlParams.get('dev') === 'true';
+    
+    if (!devMode) {
+      const session = auth.getSession();
       if (session) {
         navigate("/dashboard");
       }
+    }
   }, [navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
