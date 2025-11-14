@@ -31,7 +31,11 @@ export const useAvailableSlots = () => {
             break_start_time,
             break_end_time,
             is_active,
-            profiles!office_hours_receiving_doctor_id_fkey(full_name)
+            profiles!office_hours_receiving_doctor_id_fkey(
+              id,
+              full_name,
+              updated_at
+            )
           `)
           .eq('is_active', true)
           .order('day_of_week')
@@ -60,6 +64,11 @@ export const useAvailableSlots = () => {
       }
     },
     retry: false,
+    staleTime: 0, // Data is never stale - always refetch to get latest doctor names
+    refetchInterval: 30000, // Refetch every 30 seconds to get updated doctor names
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnMount: true, // Always refetch on mount
+    refetchOnReconnect: true, // Refetch when network reconnects
   });
 };
 

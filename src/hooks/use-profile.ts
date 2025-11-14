@@ -6,6 +6,8 @@ export interface Profile {
   id: string;
   email: string;
   full_name: string;
+  address: string | null;
+  phone: string | null;
   bank_account: string | null;
   ambulance_code: string | null;
   invoice_name: string | null;
@@ -13,6 +15,7 @@ export interface Profile {
   invoice_ico: string | null;
   invoice_dic: string | null;
   signature_image: string | null; // base64 encoded image
+  vat_payer_status: 'yes' | 'no' | 'not_applicable' | null;
   created_at: string;
 }
 
@@ -36,7 +39,7 @@ export const useProfile = (userId: string) => {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, email, full_name, bank_account, ambulance_code, invoice_name, invoice_address, invoice_ico, invoice_dic, signature_image, created_at')
+          .select('id, email, full_name, address, phone, bank_account, ambulance_code, invoice_name, invoice_address, invoice_ico, invoice_dic, signature_image, vat_payer_status, created_at')
           .eq('id', userId)
           .single();
 
@@ -57,7 +60,9 @@ export const useProfile = (userId: string) => {
     },
     enabled: !!userId,
     retry: 1,
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 0, // Data is never stale - always refetch to get latest data
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnMount: true, // Always refetch on mount
   });
 };
 

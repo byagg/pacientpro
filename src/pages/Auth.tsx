@@ -35,16 +35,19 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is already logged in (skip in dev mode from URL)
-    const urlParams = new URLSearchParams(window.location.search);
-    const devMode = urlParams.get('dev') === 'true';
-    
-    if (!devMode) {
-      const session = auth.getSession();
-      if (session) {
-        navigate("/dashboard");
+    // Check if user is already logged in
+    const checkSession = async () => {
+      try {
+        const session = await auth.getSession();
+        if (session) {
+          navigate("/dashboard", { replace: true });
+        }
+      } catch (error) {
+        console.error('Session check error:', error);
       }
-    }
+    };
+    
+    checkSession();
   }, [navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -221,7 +224,20 @@ const Auth = () => {
               )}
             </Button>
           </form>
-          <div className="mt-6 text-center text-sm">
+          
+          {isLogin && (
+            <div className="mt-4 text-center text-sm">
+              <button
+                type="button"
+                onClick={() => navigate("/reset-password")}
+                className="text-muted-foreground hover:text-primary transition-colors duration-200 hover:underline"
+              >
+                Zabudli ste heslo?
+              </button>
+            </div>
+          )}
+          
+          <div className="mt-4 text-center text-sm">
             <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}

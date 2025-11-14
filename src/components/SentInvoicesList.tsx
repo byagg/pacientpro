@@ -29,7 +29,7 @@ const SentInvoicesList = ({ userId }: SentInvoicesListProps) => {
   const getStatusText = (status: string) => {
     switch (status) {
       case "pending":
-        return "Čaká na úhradu";
+        return "Čaká na faktúru";
       case "paid":
         return "Uhradené";
       case "cancelled":
@@ -66,7 +66,7 @@ const SentInvoicesList = ({ userId }: SentInvoicesListProps) => {
             Zatiaľ nemáte žiadne prijaté faktúry
           </p>
         ) : (
-          <div className="space-y-3">
+          <div className="max-h-[600px] overflow-y-auto pr-2 space-y-3">
             {invoices.map((invoice) => (
               <div
                 key={invoice.id}
@@ -76,9 +76,11 @@ const SentInvoicesList = ({ userId }: SentInvoicesListProps) => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-semibold">{invoice.invoice_number}</p>
-                      <Badge className={getStatusColor(invoice.status)}>
-                        {getStatusText(invoice.status)}
-                      </Badge>
+                      {invoice.status !== 'pending' && (
+                        <Badge className={getStatusColor(invoice.status)}>
+                          {getStatusText(invoice.status)}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                       <User className="h-4 w-4" />

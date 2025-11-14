@@ -36,7 +36,11 @@ export const useAppointments = (userId: string) => {
         .from('appointments')
         .select(`
           *,
-          profiles!appointments_receiving_doctor_id_fkey(full_name)
+          profiles!appointments_receiving_doctor_id_fkey(
+            id,
+            full_name,
+            updated_at
+          )
         `)
         .eq('angiologist_id', userId)
         .order('appointment_date', { ascending: false });
@@ -52,6 +56,11 @@ export const useAppointments = (userId: string) => {
       })) as Appointment[];
     },
     enabled: !!userId,
+    staleTime: 0, // Data is never stale - always refetch to get latest doctor names
+    refetchInterval: 30000, // Refetch every 30 seconds to get updated doctor names
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnMount: true, // Always refetch on mount
+    refetchOnReconnect: true, // Refetch when network reconnects
   });
 };
 
@@ -93,6 +102,45 @@ export const useCreateAppointment = () => {
         variant: "destructive",
         title: "Chyba",
         description: error.message,
+      });
+    },
+  });
+};
+
+// Cancel appointment (set status to 'cancelled')
+export const useCancelAppointment = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ appointmentId, userId }: { appointmentId: string; userId: string }) => {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: 'cancelled' })
+        .eq('id', appointmentId);
+
+      if (error) {
+        console.error('Error cancelling appointment:', error);
+        throw error;
+      }
+
+      return { appointmentId, userId };
+    },
+    onSuccess: (data) => {
+      // Invalidate ALL related queries to ensure synchronization
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["commissions"] });
+      queryClient.invalidateQueries({ queryKey: ["received-patients"] });
+      toast({
+        title: "Rezervácia zrušená",
+        description: "Rezervácia bola úspešne zrušená",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Chyba",
+        description: error.message || "Nepodarilo sa zrušiť rezerváciu",
       });
     },
   });

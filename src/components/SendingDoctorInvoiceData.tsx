@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { User, MapPin, CreditCard, Building2, FileText, ChevronDown, ChevronUp, Plus } from "lucide-react";
@@ -34,6 +34,12 @@ interface SendingDoctor {
 const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDataProps) => {
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
   const [isOpen, setIsOpen] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+
+  // Reset showDetails when doctor changes
+  useEffect(() => {
+    setShowDetails(false);
+  }, [selectedDoctorId]);
 
   // Fetch all sending doctors who have sent patients to this receiving doctor
   // Auto-refresh every 30 seconds to get updated list
@@ -129,12 +135,12 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
               </CollapsibleTrigger>
             </div>
           </div>
-          <CardDescription>
-            Údaje odosielajúceho lekára pre faktúru (dodávateľ)
-          </CardDescription>
         </CardHeader>
         <CollapsibleContent>
           <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Údaje odosielajúceho lekára pre faktúru (dodávateľ)
+            </p>
         {/* Error message */}
         {loadingError && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -236,7 +242,21 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
             <p>Lekár nebol nájdený</p>
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="space-y-3">
+            {/* Toggle button for invoice details */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowDetails(!showDetails)}
+              className="w-full justify-between"
+            >
+              <span>{showDetails ? 'Skryť fakturačné údaje' : 'Zobraziť fakturačné údaje'}</span>
+              {showDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+
+            {/* Invoice details - shown only when showDetails is true */}
+            {showDetails && (
+              <div className="grid gap-4">
             <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
               <User className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div className="flex-1">
@@ -304,6 +324,8 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
                 <p className="text-sm text-yellow-800">
                   ⚠️ Odosielajúci lekár ešte nevyplnil všetky fakturačné údaje.
                 </p>
+              </div>
+            )}
               </div>
             )}
           </div>

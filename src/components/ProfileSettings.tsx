@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useProfile } from "@/hooks/use-profile";
-import { User, Loader2, Save, Upload, X, AlertCircle } from "lucide-react";
+import { User, Loader2, Save, Upload, X, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -59,6 +60,7 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
   const [signatureImage, setSignatureImage] = useState("");
   const [vatPayerStatus, setVatPayerStatus] = useState<'yes' | 'no' | 'not_applicable'>('not_applicable');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isInvoiceDataOpen, setIsInvoiceDataOpen] = useState(false);
 
   // Update form when profile loads
   useEffect(() => {
@@ -121,21 +123,101 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
 
   const updateProfile = useMutation({
     mutationFn: async (data: Record<string, any>) => {
+      console.log('ProfileSettings: Updating profile for userId:', userId);
+      console.log('ProfileSettings: Update data:', data);
+      
+      // Verify current user
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      console.log('ProfileSettings: Current auth user:', currentUser?.id);
+      console.log('ProfileSettings: userId matches auth.uid():', currentUser?.id === userId);
+      
+      if (currentUser?.id !== userId) {
+        const error = new Error('User ID mismatch. Cannot update profile.');
+        console.error('ProfileSettings: User ID mismatch!', {
+          userId,
+          authUserId: currentUser?.id
+        });
+        throw error;
+      }
+      
       const { data: updated, error } = await supabase
         .from('profiles')
         .update(data)
         .eq('id', userId)
-        .select()
+        .select('id, email, full_name, address, phone, bank_account, ambulance_code, invoice_name, invoice_address, invoice_ico, invoice_dic, signature_image, vat_payer_status, created_at, updated_at')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('ProfileSettings: Update error:', error);
+        console.error('ProfileSettings: Error code:', error.code);
+        console.error('ProfileSettings: Error message:', error.message);
+        console.error('ProfileSettings: Error details:', error.details);
+        console.error('ProfileSettings: Error hint:', error.hint);
+        
+        // More specific error message
+        let errorMessage = error.message || 'Nepodarilo sa aktualizovať profil.';
+        if (error.code === '42501') {
+          errorMessage = 'Nemáte oprávnenie na úpravu tohto profilu. Skontrolujte RLS policies.';
+        } else if (error.code === 'PGRST116') {
+          errorMessage = 'Profil nebol nájdený alebo sa nezmenil.';
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      console.log('ProfileSettings: Update successful:', updated);
       return updated;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["profile", userId] });
+    onSuccess: async (updated) => {
+      console.log('ProfileSettings: onSuccess - updated data:', updated);
+      
+      // Update local state immediately from updated response
+      if (updated) {
+        setFullName(updated.full_name || "");
+        setAddress(updated.address || "");
+        setPhone(updated.phone || "");
+        setAmbulanceCode(updated.ambulance_code || "");
+        setInvoiceName(updated.invoice_name || "");
+        setInvoiceAddress(updated.invoice_address || "");
+        setBankAccount(updated.bank_account || "");
+        setInvoiceIco(updated.invoice_ico || "");
+        setInvoiceDic(updated.invoice_dic || "");
+        setSignatureImage(updated.signature_image || "");
+        setVatPayerStatus((updated.vat_payer_status as 'yes' | 'no' | 'not_applicable') || 'not_applicable');
+        console.log('ProfileSettings: Local state updated from response');
+      }
+      
+      // Invalidate and refetch profile immediately
+      await queryClient.invalidateQueries({ queryKey: ["profile", userId] });
+      await queryClient.refetchQueries({ queryKey: ["profile", userId] });
+      
+      // Invalidate and refetch available slots to refresh doctor names
+      // This ensures that when a receiving doctor changes their name,
+      // it updates in the slot selection for sending doctors
+      await queryClient.invalidateQueries({ queryKey: ["available-slots"] });
+      await queryClient.refetchQueries({ queryKey: ["available-slots"] });
+      
+      // Invalidate and refetch appointments to refresh receiving_doctor_name in appointment lists
+      // This ensures that when a receiving doctor changes their name,
+      // it updates in all appointment lists for sending doctors
+      await queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      await queryClient.refetchQueries({ queryKey: ["appointments"] });
+      
+      // Invalidate and refetch invoices to refresh doctor names in invoice lists
+      // This ensures that when a doctor changes their name,
+      // it updates in all invoice lists
+      await queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      await queryClient.invalidateQueries({ queryKey: ["invoices-sending"] });
+      await queryClient.invalidateQueries({ queryKey: ["invoices-receiving"] });
+      await queryClient.refetchQueries({ queryKey: ["invoices"] });
+      await queryClient.refetchQueries({ queryKey: ["invoices-sending"] });
+      await queryClient.refetchQueries({ queryKey: ["invoices-receiving"] });
+      
       toast({
         title: "Profil aktualizovaný",
-        description: "Vaše údaje boli úspešne uložené.",
+        description: updated?.ambulance_code 
+          ? `Vaše údaje boli uložené. Nový kód ambulancie: ${updated.ambulance_code}`
+          : "Vaše údaje boli úspešne uložené. Mená lekárov sa aktualizujú...",
       });
       setErrors({});
     },
@@ -156,7 +238,7 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
         full_name: fullName,
         address: address || null,
         phone: phone || null,
-        ambulance_code: ambulanceCode || null,
+        // Note: ambulance_code is NOT included here - it's auto-generated by database trigger
         invoice_name: invoiceName || null,
         invoice_address: invoiceAddress || null,
         bank_account: bankAccount ? bankAccount.replace(/\s/g, '') : null,
@@ -240,17 +322,16 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ambulanceCode">Kód ambulancie (voliteľné)</Label>
+            <Label htmlFor="ambulanceCode">Kód ambulancie</Label>
             <Input
               id="ambulanceCode"
               type="text"
               value={ambulanceCode}
-              onChange={(e) => setAmbulanceCode(e.target.value)}
-              placeholder="AG"
-              maxLength={10}
+              disabled
+              className="bg-muted"
             />
             <p className="text-xs text-muted-foreground">
-              Používa sa v číslach pacientov (napr. AG-251109-1230)
+              Automaticky generovaný z vášho mena (napr. {fullName ? fullName.split(' ').filter(n => n).slice(0, 2).map(n => n[0]).join('').toUpperCase() : 'AG'})
             </p>
           </div>
 
@@ -286,11 +367,20 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
             </p>
           </div>
 
-          {/* Fakturačné údaje - separator */}
-          <div className="border-t pt-3 mt-3">
-            <h3 className="text-base font-semibold mb-2">Fakturačné údaje</h3>
+          {/* Fakturačné údaje - collapsible section */}
+          <Collapsible open={isInvoiceDataOpen} onOpenChange={setIsInvoiceDataOpen} className="border-t pt-3 mt-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base font-semibold">Fakturačné údaje</h3>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-9 p-0">
+                  {isInvoiceDataOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  <span className="sr-only">Zobraziť/Skryť fakturačné údaje</span>
+                </Button>
+              </CollapsibleTrigger>
+            </div>
             
-            <div className="space-y-2">
+            <CollapsibleContent>
+              <div className="space-y-2">
               <div className="space-y-2">
                 <Label htmlFor="invoiceName">Meno / Názov firmy na faktúre (voliteľné)</Label>
                 <Input
@@ -492,8 +582,9 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
                   Odporúčaný formát: JPG/PNG, max. 500KB. Podpis sa zobrazí na faktúre.
                 </p>
               </div>
-            </div>
-          </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           <div className="pt-3 border-t mt-3">
             <Button

@@ -2,10 +2,10 @@ import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, CheckCircle2, DollarSign, Trash2, User, Send } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, DollarSign, Trash2, User, Send, X } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
-import { useAppointments, useDeleteAppointment } from "@/hooks/use-appointments";
+import { useAppointments, useDeleteAppointment, useCancelAppointment } from "@/hooks/use-appointments";
 import { useCommissions } from "@/hooks/use-commissions";
 import { formatDoctorName } from "@/lib/utils-doctors";
 
@@ -17,16 +17,22 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
   const { data: appointments = [], isLoading } = useAppointments(userId);
   const { data: commissions = [] } = useCommissions(userId);
   const deleteAppointment = useDeleteAppointment();
+  const cancelAppointment = useCancelAppointment();
 
-  // Filter appointments - keep only those from the last year
+  // Filter appointments - keep only those from the last year and sort by date
   const filteredAppointments = useMemo(() => {
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
     
-    return appointments.filter(appointment => {
-      const appointmentDate = new Date(appointment.appointment_date);
-      return appointmentDate >= oneYearAgo;
-    });
+    return appointments
+      .filter(appointment => {
+        const appointmentDate = new Date(appointment.appointment_date);
+        return appointmentDate >= oneYearAgo;
+      })
+      .sort((a, b) => {
+        // Sort by appointment_date descending (newest first)
+        return new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime();
+      });
   }, [appointments]);
 
   // Get commission for appointment
@@ -60,11 +66,33 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
     }
   };
 
+  // Funkcia na určenie farby podľa štádia spracovania
+  // 1. Odoslaný - tyrkysový, 2. Vyšetrený (čaká na faktúru) - bledomodrý, 3. Vyfakturovaný/Vyplatený - tmavomodrý
+  const getStageColor = (isExamined: boolean, isPaid: boolean) => {
+    if (isPaid) {
+      // Štádium 3: Vyfakturovaný/Vyplatený - tmavomodrý
+      return "border-l-[6px] border-l-blue-700 bg-blue-100 dark:bg-blue-900/60";
+    } else if (isExamined) {
+      // Štádium 2: Vyšetrený, čaká na faktúru - bledomodrý
+      return "border-l-[6px] border-l-sky-300 bg-sky-100 dark:bg-sky-900/60";
+    } else {
+      // Štádium 1: Odoslaný, ešte nie vyšetrený - tyrkysový
+      return "border-l-[6px] border-l-cyan-500 bg-cyan-100 dark:bg-cyan-900/60";
+    }
+  };
+
   const handleDelete = async (appointmentId: string) => {
     if (!confirm("Naozaj chcete vymazať tohto pacienta? Táto akcia je nenávratná.")) {
       return;
     }
     await deleteAppointment.mutateAsync({ appointmentId, userId });
+  };
+
+  const handleCancel = async (appointmentId: string) => {
+    if (!confirm("Naozaj chcete zrušiť túto rezerváciu?")) {
+      return;
+    }
+    await cancelAppointment.mutateAsync({ appointmentId, userId });
   };
 
   if (isLoading) {
@@ -78,7 +106,7 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
   }
 
   return (
-    <Card className="shadow-card">
+    <Card className="shadow-card h-full flex flex-col">
       <CardHeader>
         <div className="flex items-center gap-2">
           <Calendar className="h-5 w-5 text-primary" />
@@ -88,7 +116,7 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
           História všetkých vašich rezervácií
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 min-h-0 overflow-y-auto pr-2">
         {filteredAppointments.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">
             Zatiaľ nemáte žiadne rezervácie z posledného roka
@@ -103,20 +131,35 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
               return (
               <div
                 key={appointment.id}
-                  className="border rounded-lg p-4 hover:bg-muted/50 transition-colors relative"
+                  className={`border rounded-lg p-4 hover:bg-muted/50 transition-colors relative ${getStageColor(isExamined, isPaid)}`}
               >
-                  {/* Delete button */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => handleDelete(appointment.id)}
-                    disabled={deleteAppointment.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {/* Action buttons */}
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    {appointment.status === 'scheduled' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-orange-600"
+                        onClick={() => handleCancel(appointment.id)}
+                        disabled={cancelAppointment.isPending}
+                        title="Zrušiť rezerváciu"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleDelete(appointment.id)}
+                      disabled={deleteAppointment.isPending}
+                      title="Vymazať zo zoznamu"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
 
-                  <div className="flex justify-between items-start mb-2 pr-10">
+                  <div className="flex justify-between items-start mb-2 pr-20">
                     <div className="flex-1">
                     <p className="font-semibold text-lg">
                       Pacient: {appointment.patient_number}
@@ -191,7 +234,7 @@ const AppointmentsList = ({ userId }: AppointmentsListProps) => {
                           ) : (
                             <Badge variant="secondary">
                               <Clock className="mr-1 h-3 w-3" />
-                              Čaká na vyplatenie
+                              Čaká na vystavenie faktúry
                             </Badge>
                           )}
                         </div>

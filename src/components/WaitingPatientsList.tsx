@@ -2,11 +2,11 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, CheckCircle2, Loader2, Trash2 } from "lucide-react";
+import { Calendar, Clock, User, CheckCircle2, Loader2, Trash2, X } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useReceivedPatients, useMarkPatientExamined } from "@/hooks/use-received-patients";
-import { useDeleteAppointment } from "@/hooks/use-appointments";
+import { useDeleteAppointment, useCancelAppointment } from "@/hooks/use-appointments";
 import { useToast } from "@/hooks/use-toast";
 
 interface WaitingPatientsListProps {
@@ -17,6 +17,7 @@ const WaitingPatientsList = ({ receivingDoctorId }: WaitingPatientsListProps) =>
   const { data: allPatients = [], isLoading } = useReceivedPatients(receivingDoctorId);
   const markExamined = useMarkPatientExamined();
   const deleteAppointment = useDeleteAppointment();
+  const cancelAppointment = useCancelAppointment();
   const { toast } = useToast();
 
   // Filter only waiting patients
@@ -33,10 +34,23 @@ const WaitingPatientsList = ({ receivingDoctorId }: WaitingPatientsListProps) =>
     });
   };
 
+  // Funkcia na určenie farby podľa štádia spracovania
+  // Odoslaný - tyrkysový
+  const getStageColor = () => {
+    return "border-l-[6px] border-l-cyan-500 bg-cyan-50 dark:bg-cyan-950/50";
+  };
+
   const handleDelete = async (appointmentId: string, patientNumber: string, userId: string) => {
     if (confirm(`Naozaj chcete vymazať pacienta ${patientNumber}?`)) {
       await deleteAppointment.mutateAsync({ appointmentId, userId });
     }
+  };
+
+  const handleCancel = async (appointmentId: string, userId: string) => {
+    if (!confirm("Naozaj chcete zrušiť túto rezerváciu?")) {
+      return;
+    }
+    await cancelAppointment.mutateAsync({ appointmentId, userId });
   };
 
   if (isLoading) {
@@ -70,7 +84,7 @@ const WaitingPatientsList = ({ receivingDoctorId }: WaitingPatientsListProps) =>
             {waitingPatients.map((patient) => (
               <div
                 key={patient.id}
-                className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                className={`border rounded-lg p-4 hover:bg-muted/50 transition-colors ${getStageColor()}`}
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
@@ -115,11 +129,23 @@ const WaitingPatientsList = ({ receivingDoctorId }: WaitingPatientsListProps) =>
                       </>
                     )}
                   </Button>
+                  {patient.status === 'scheduled' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCancel(patient.id, receivingDoctorId)}
+                      disabled={cancelAppointment.isPending}
+                      title="Zrušiť rezerváciu"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="destructive"
                     onClick={() => handleDelete(patient.id, patient.patient_number, patient.angiologist_id)}
                     disabled={deleteAppointment.isPending}
+                    title="Vymazať zo zoznamu"
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>

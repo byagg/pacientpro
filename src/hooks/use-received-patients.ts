@@ -23,9 +23,8 @@ export const useReceivedPatients = (receivingDoctorId: string) => {
             *,
             profiles!appointments_angiologist_id_fkey(full_name, email)
           `)
-          .in('status', ['scheduled', 'completed'])
-          .order('examined_at', { ascending: true, nullsFirst: true })
-          .order('appointment_date', { ascending: true });
+          .in('status', ['scheduled', 'completed', 'cancelled'])
+          .order('appointment_date', { ascending: false });
 
         if (error) {
           console.error('Error fetching received patients:', error);

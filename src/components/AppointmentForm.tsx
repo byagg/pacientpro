@@ -12,6 +12,7 @@ import { z } from "zod";
 import { useCreateAppointment } from "@/hooks/use-appointments";
 import { useAvailableSlots, generateTimeSlotsForDate } from "@/hooks/use-available-slots";
 import { useProfile } from "@/hooks/use-profile";
+import { formatDoctorName } from "@/lib/utils-doctors";
 const appointmentSchema = z.object({
   ambulanceCode: z.string().min(1, "Kód ambulancie je povinný"),
   appointmentDate: z.string().min(1, "Dátum rezervácie je povinný").refine(
@@ -35,6 +36,7 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
   const { data: profile } = useProfile(userId);
   const [selectedDate, setSelectedDate] = useState(""); // For sending doctor - date only
   const [selectedSlot, setSelectedSlot] = useState(""); // For sending doctor - time slot
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string>("all"); // Filter for receiving doctor
   const [appointmentDate, setAppointmentDate] = useState(""); // For receiving doctor - datetime-local
   const [procedureType, setProcedureType] = useState("");
   const createAppointment = useCreateAppointment();
@@ -44,17 +46,38 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
   // Get ambulance code from user profile
   const ambulanceCode = profile?.ambulance_code || "XX";
 
+  // Get unique doctors for filter dropdown (from all available slots)
+  const uniqueDoctors = useMemo(() => {
+    const doctorsMap = new Map<string, string>();
+    availableSlots.forEach(slot => {
+      if (slot.receiving_doctor_id && slot.receiving_doctor_name) {
+        if (!doctorsMap.has(slot.receiving_doctor_id)) {
+          doctorsMap.set(slot.receiving_doctor_id, slot.receiving_doctor_name);
+        }
+      }
+    });
+    return Array.from(doctorsMap.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
+  }, [availableSlots]);
+
+  // Filter slots by selected doctor
+  const filteredSlots = useMemo(() => {
+    if (selectedDoctorId === "all") return availableSlots;
+    return availableSlots.filter(slot => slot.receiving_doctor_id === selectedDoctorId);
+  }, [availableSlots, selectedDoctorId]);
+
   // Generate time slots for selected date (for sending doctor)
   const timeSlots = useMemo(() => {
     if (!selectedDate || userType === 'receiving') return [];
     const date = new Date(selectedDate);
     if (isNaN(date.getTime())) return [];
-    return generateTimeSlotsForDate(date, availableSlots);
-  }, [selectedDate, availableSlots, userType]);
+    return generateTimeSlotsForDate(date, filteredSlots);
+  }, [selectedDate, filteredSlots, userType]);
 
   // Get unique available dates from slots (for sending doctor)
   const availableDatesForCalendar = useMemo(() => {
-    if (userType === 'receiving' || availableSlots.length === 0) return [];
+    if (userType === 'receiving' || filteredSlots.length === 0) return [];
     
     const dates: Date[] = [];
     const today = new Date();
@@ -65,14 +88,14 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
       const checkDate = new Date(today);
       checkDate.setDate(today.getDate() + i);
       
-      const slots = generateTimeSlotsForDate(checkDate, availableSlots);
+      const slots = generateTimeSlotsForDate(checkDate, filteredSlots);
       if (slots.length > 0) {
         dates.push(new Date(checkDate));
       }
     }
     
     return dates;
-  }, [availableSlots, userType]);
+  }, [filteredSlots, userType]);
 
   // Convert selected date string to Date object for calendar
   const selectedDateObj = selectedDate ? new Date(selectedDate) : undefined;
@@ -169,7 +192,7 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
   };
 
   return (
-    <Card className="shadow-card">
+    <Card className="shadow-card h-full flex flex-col">
       <CardHeader>
         <div className="flex items-center gap-2">
           <CalendarPlus className="h-5 w-5 text-primary" />
@@ -221,12 +244,48 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
             />
           </div>
           ) : (
-            // Sending doctor: calendar + slot selector
+            // Sending doctor: doctor filter + calendar + slot selector
             <>
+              {/* Doctor filter */}
+              {uniqueDoctors.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="doctorFilter">Prijímajúci lekár</Label>
+                  <Select 
+                    value={selectedDoctorId} 
+                    onValueChange={(value) => {
+                      setSelectedDoctorId(value);
+                      setSelectedDate(""); // Reset date when doctor changes
+                      setSelectedSlot(""); // Reset slot when doctor changes
+                    }}
+                  >
+                    <SelectTrigger id="doctorFilter">
+                      <SelectValue placeholder="Všetci lekári" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">
+                        Všetci lekári ({availableSlots.length > 0 ? uniqueDoctors.length : 0})
+                      </SelectItem>
+                      {uniqueDoctors.map((doctor) => (
+                        <SelectItem key={doctor.id} value={doctor.id}>
+                          {doctor.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Filtrovať dostupné termíny podľa lekára
+                  </p>
+                </div>
+              )}
+
               {availableDatesForCalendar.length === 0 && (
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-200">
                   <p className="font-semibold mb-1">⚠️ Žiadne dostupné termíny</p>
-                  <p>Momentálne nie sú dostupné žiadne termíny na rezerváciu. Prijímajúci lekári ešte nenastavili svoje ordinačné hodiny.</p>
+                  <p>
+                    {selectedDoctorId === "all" 
+                      ? "Momentálne nie sú dostupné žiadne termíny na rezerváciu. Prijímajúci lekári ešte nenastavili svoje ordinačné hodiny."
+                      : "Vybraný lekár momentálne nemá dostupné termíny. Skúste vybrať iného lekára."}
+                  </p>
                 </div>
               )}
               <div className="space-y-2">
@@ -262,10 +321,12 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
                     return !hasSlots;
                   }}
                   modifiers={{
-                    available: availableDatesForCalendar
+                    available: availableDatesForCalendar,
+                    today: new Date()
                   }}
                   modifiersClassNames={{
-                    available: "bg-green-100 text-green-900 font-semibold hover:bg-green-200 dark:bg-green-900 dark:text-green-100"
+                    available: "bg-green-100 text-green-900 font-semibold hover:bg-green-200 dark:bg-green-900 dark:text-green-100",
+                    today: "border-2 border-primary font-semibold"
                   }}
                   className="rounded-md border"
                 />
@@ -294,16 +355,41 @@ const AppointmentForm = ({ userId, userType }: AppointmentFormProps) => {
                     } />
                   </SelectTrigger>
                   <SelectContent>
-                    {timeSlots.map((slot, index) => (
-                      <SelectItem key={index} value={slot.time}>
-                        {slot.label}
-                      </SelectItem>
-                    ))}
+                    {timeSlots.map((slot, index) => {
+                      // Use label if available (already formatted with doctor name)
+                      // Otherwise, construct label from time and doctor name
+                      let displayLabel = slot.label;
+                      
+                      if (!displayLabel || !slot.receivingDoctorName) {
+                        // Fallback: construct label manually
+                        const doctorName = slot.receivingDoctorName || 
+                          (selectedDoctorId !== "all" 
+                            ? uniqueDoctors.find(d => d.id === selectedDoctorId)?.name 
+                            : null) ||
+                          "Neznámy lekár";
+                        
+                        const slotDate = new Date(slot.time);
+                        const timeString = `${String(slotDate.getHours()).padStart(2, '0')}:${String(slotDate.getMinutes()).padStart(2, '0')}`;
+                        displayLabel = `${timeString} - ${formatDoctorName(doctorName)}`;
+                      }
+                      
+                      return (
+                        <SelectItem key={`${slot.time}-${index}`} value={slot.time}>
+                          {displayLabel}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
-                {selectedDate && timeSlots.length === 0 && (
+                {selectedDate && timeSlots.length > 0 && (
                   <p className="text-xs text-muted-foreground">
+                    Dostupných slotov: {timeSlots.length}
+                  </p>
+                )}
+                {selectedDate && timeSlots.length === 0 && (
+                  <p className="text-xs text-red-500">
                     Pre tento dátum nie sú dostupné žiadne ordinančné hodiny
+                    {selectedDoctorId !== "all" && " od vybraného lekára"}
                   </p>
                 )}
               </div>

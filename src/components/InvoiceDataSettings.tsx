@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Loader2, Check, X, AlertCircle, Upload, Image as ImageIcon } from "lucide-react";
+import { FileText, Loader2, Check, X, AlertCircle, Upload, Image as ImageIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -44,6 +45,7 @@ const InvoiceDataSettings = ({
   const { toast } = useToast();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     invoice_name: "",
     invoice_address: "",
@@ -191,18 +193,30 @@ const InvoiceDataSettings = ({
     );
   }
 
+  const hasCompleteData = formData.invoice_name && formData.invoice_address && formData.bank_account;
+
   return (
-    <Card className={`shadow-card border-l-4 ${borderColor}`}>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-primary" />
-          <CardTitle>{title}</CardTitle>
-        </div>
-        <CardDescription>
-          {description}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className={`shadow-card border-l-4 ${borderColor}`}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              <CardTitle>{title}</CardTitle>
+            </div>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-9 p-0">
+                {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                <span className="sr-only">Toggle</span>
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+          <CardDescription>
+            {description}
+          </CardDescription>
+        </CardHeader>
+        <CollapsibleContent>
+          <CardContent className="space-y-4">
         {isEditing ? (
           <>
             <div className="space-y-2">
@@ -460,8 +474,10 @@ const InvoiceDataSettings = ({
             </Button>
           </>
         )}
-      </CardContent>
-    </Card>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 };
 

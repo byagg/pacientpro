@@ -80,7 +80,7 @@ const IssuedInvoicesList = ({ receivingDoctorId }: IssuedInvoicesListProps) => {
   const getStatusText = (status: string) => {
     switch (status) {
       case "pending":
-        return "Čaká na úhradu";
+        return "Čaká na faktúru";
       case "paid":
         return "Uhradená";
       case "cancelled":

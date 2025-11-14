@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Calendar, UserCheck, UserPlus, ClipboardList, FileText, Settings, Clock, Users, Code, User as UserIcon } from "lucide-react";
+import { LogOut, Calendar, UserCheck, UserPlus, ClipboardList, FileText, Clock, Users, User as UserIcon } from "lucide-react";
 import AppointmentForm from "@/components/AppointmentForm";
 import AppointmentsList from "@/components/AppointmentsList";
 import OfficeHoursSettings from "@/components/OfficeHoursSettings";
@@ -19,56 +19,47 @@ import IssuedInvoicesList from "@/components/IssuedInvoicesList";
 import SendingDoctorInvoiceData from "@/components/SendingDoctorInvoiceData";
 import ProfileSettings from "@/components/ProfileSettings";
 
-// 🔧 DEV MODE - Dočasne vypnutá autentifikácia pre testovanie
-const DEV_MODE = true;
-
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [devUserType, setDevUserType] = useState<'sending' | 'receiving'>('sending');
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (DEV_MODE) {
-      // DEV MODE: Vytvor mock používateľa s UUID formátovaným ID
-      const mockUser: User = {
-        id: devUserType === 'sending' 
-          ? '00000000-0000-0000-0000-000000000001'  // Mock UUID pre odosielajúceho
-          : '00000000-0000-0000-0000-000000000002', // Mock UUID pre prijímajúceho
-        email: devUserType === 'sending' ? 'odosielajuci@dev.sk' : 'prijimajuci@dev.sk',
-        full_name: devUserType === 'sending' ? 'DEV Odosielajúci Lekár' : 'DEV Prijímajúci Lekár',
-        user_type: devUserType,
-        ambulance_code: devUserType === 'sending' ? 'OD' : 'PJ',
-      };
-      setUser(mockUser);
-      setLoading(false);
-    } else {
-      // Normálny režim: Kontrola session
-      const session = auth.getSession();
-      if (session) {
-        setUser(session.user);
-      } else {
+    const checkSession = async () => {
+      try {
+        const session = await auth.getSession();
+        if (session) {
+          setUser(session.user);
+        } else {
+          navigate("/auth");
+        }
+      } catch (error) {
+        console.error('Session check error:', error);
         navigate("/auth");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }
-  }, [navigate, devUserType]);
+    };
 
-  const handleLogout = () => {
-    if (DEV_MODE) {
-      toast({
-        title: "DEV MODE ukončený",
-        description: "Presmerovanie na prihlásenie...",
-      });
-      navigate("/auth");
-    } else {
-      auth.signOut();
+    checkSession();
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
       toast({
         title: "Odhlásenie úspešné",
         description: "Dovidenia!",
       });
       navigate("/auth");
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        variant: "destructive",
+        title: "Chyba pri odhlásení",
+        description: "Skúste to prosím znova.",
+      });
     }
   };
 
@@ -82,36 +73,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted">
-      {/* 🔧 DEV MODE Panel */}
-      {DEV_MODE && (
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-3 text-center text-sm font-semibold shadow-lg">
-          <div className="container mx-auto flex items-center justify-center gap-4">
-            <Code className="h-4 w-4 animate-pulse" />
-            <span className="font-bold">DEV MODE</span>
-            <span className="text-orange-200">|</span>
-            <span>Prepnúť rolu:</span>
-            <Button
-              size="sm"
-              variant={devUserType === 'sending' ? 'secondary' : 'outline'}
-              onClick={() => setDevUserType('sending')}
-              className={devUserType === 'sending' ? 'bg-white text-orange-500 hover:bg-white/90 shadow-md' : 'bg-orange-600 hover:bg-orange-700 border-white/20 hover:border-white/40'}
-            >
-              <UserPlus className="h-3 w-3 mr-1" />
-              Odosielajúci
-            </Button>
-            <Button
-              size="sm"
-              variant={devUserType === 'receiving' ? 'secondary' : 'outline'}
-              onClick={() => setDevUserType('receiving')}
-              className={devUserType === 'receiving' ? 'bg-white text-orange-500 hover:bg-white/90 shadow-md' : 'bg-orange-600 hover:bg-orange-700 border-white/20 hover:border-white/40'}
-            >
-              <UserCheck className="h-3 w-3 mr-1" />
-              Prijímajúci
-            </Button>
-          </div>
-        </div>
-      )}
-
       <header className="border-b bg-card/70 backdrop-blur-md sticky top-0 z-10 shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -119,16 +80,16 @@ const Dashboard = () => {
               <Calendar className="h-6 w-6 text-primary" />
             </div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">PACIENT-PRO</h1>
-            {DEV_MODE && (
-              <Badge variant="outline" className="ml-2 text-xs bg-orange-100 text-orange-700 border-orange-300 animate-pulse">
-                DEV
-              </Badge>
-            )}
           </div>
-          <Button variant="outline" onClick={handleLogout} className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors">
-            <LogOut className="mr-2 h-4 w-4" />
-            {DEV_MODE ? 'Zavrieť DEV' : 'Odhlásiť sa'}
-          </Button>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground hidden sm:block">
+              {user?.email}
+            </span>
+            <Button variant="outline" onClick={handleLogout} className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors">
+              <LogOut className="mr-2 h-4 w-4" />
+              Odhlásiť sa
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -210,6 +171,12 @@ const Dashboard = () => {
                 </TabsContent>
 
                 <TabsContent value="section3" className="space-y-3">
+                  <InvoiceDataSettings 
+                    userId={user.id} 
+                    title="Moje fakturačné údaje"
+                    description="Údaje pre vystavovanie faktúr (dodávateľ)"
+                    borderColor="border-l-green-500"
+                  />
                   <SendingDoctorInvoiceData receivingDoctorId={user.id} />
                   <ReceivingInvoiceCreator receivingDoctorId={user.id} />
                   <IssuedInvoicesList receivingDoctorId={user.id} />
@@ -223,7 +190,7 @@ const Dashboard = () => {
               // Sending doctor sections
               <>
                 <TabsContent value="section1" className="space-y-3">
-                  <div className="grid gap-3 md:grid-cols-2">
+                  <div className="grid gap-3 md:grid-cols-2 md:items-stretch">
                     <AppointmentForm userId={user.id} userType={user.user_type} />
                     <AppointmentsList userId={user.id} />
                   </div>

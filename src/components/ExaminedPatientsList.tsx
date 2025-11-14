@@ -39,6 +39,18 @@ const ExaminedPatientsList = ({ receivingDoctorId }: ExaminedPatientsListProps) 
     return { examinedPatients: examined, commissions: commissionMap };
   }, [allPatients, allCommissions]);
 
+  // Funkcia na určenie farby podľa štádia spracovania
+  // 2. Vyšetrený - bledomodrý, 3. Vyfakturovaný - tmavomodrý
+  const getStageColor = (isPaid: boolean) => {
+    if (isPaid) {
+      // Štádium 3: Vyfakturovaný/Vyplatený - tmavomodrý
+      return "border-l-[6px] border-l-blue-700 bg-blue-50 dark:bg-blue-950/50";
+    } else {
+      // Štádium 2: Vyšetrený - bledomodrý
+      return "border-l-[6px] border-l-sky-300 bg-sky-50 dark:bg-sky-950/50";
+    }
+  };
+
   const handleDelete = async (appointmentId: string, patientNumber: string, userId: string) => {
     if (confirm(`Naozaj chcete vymazať pacienta ${patientNumber}?`)) {
       await deleteAppointment.mutateAsync({ appointmentId, userId });
@@ -80,14 +92,14 @@ const ExaminedPatientsList = ({ receivingDoctorId }: ExaminedPatientsListProps) 
               return (
                 <div
                   key={patient.id}
-                  className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                  className={`border rounded-lg p-4 hover:bg-muted/50 transition-colors ${getStageColor(isPaid)}`}
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <p className="font-semibold">{patient.patient_number}</p>
                         <Badge variant={isPaid ? "default" : "secondary"}>
-                          {isPaid ? "Zaplatené" : "Čaká na platbu"}
+                          {isPaid ? "Zaplatené" : "Čaká na faktúru"}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">

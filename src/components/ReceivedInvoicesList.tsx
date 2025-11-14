@@ -35,7 +35,7 @@ const ReceivedInvoicesList = ({ receivingDoctorId }: ReceivedInvoicesListProps) 
   const getStatusText = (status: string) => {
     switch (status) {
       case "pending":
-        return "Čaká na úhradu";
+        return "Čaká na faktúru";
       case "paid":
         return "Uhradené";
       case "cancelled":

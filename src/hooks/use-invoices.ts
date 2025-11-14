@@ -70,6 +70,11 @@ export const useSendingInvoices = (userId: string) => {
       })) as InvoiceWithDetails[];
     },
     enabled: !!userId,
+    staleTime: 0, // Data is never stale - always refetch to get latest doctor names
+    refetchInterval: 30000, // Refetch every 30 seconds to get updated doctor names
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnMount: true, // Always refetch on mount
+    refetchOnReconnect: true, // Refetch when network reconnects
   });
 };
 
@@ -112,6 +117,11 @@ export const useReceivingInvoices = (userId: string) => {
       })) as InvoiceWithDetails[];
     },
     enabled: !!userId,
+    staleTime: 0, // Data is never stale - always refetch to get latest doctor names
+    refetchInterval: 30000, // Refetch every 30 seconds to get updated doctor names
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnMount: true, // Always refetch on mount
+    refetchOnReconnect: true, // Refetch when network reconnects
   });
 };
 

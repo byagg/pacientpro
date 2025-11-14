@@ -4,12 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, User, CheckCircle2, Loader2, DollarSign, Trash2 } from "lucide-react";
+import { Calendar, Clock, User, CheckCircle2, Loader2, DollarSign, Trash2, X } from "lucide-react";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useReceivedPatients, useMarkPatientExamined } from "@/hooks/use-received-patients";
 import { useCommissions, useMarkCommissionPaid } from "@/hooks/use-commissions";
-import { useDeleteAppointment } from "@/hooks/use-appointments";
+import { useDeleteAppointment, useCancelAppointment } from "@/hooks/use-appointments";
 import { useToast } from "@/hooks/use-toast";
 
 interface ReceivedPatientsListProps {
@@ -22,6 +22,7 @@ const ReceivedPatientsList = ({ receivingDoctorId }: ReceivedPatientsListProps) 
   const markExamined = useMarkPatientExamined();
   const markPaid = useMarkCommissionPaid();
   const deleteAppointment = useDeleteAppointment();
+  const cancelAppointment = useCancelAppointment();
   const { toast } = useToast();
 
   const [examinedTime, setExaminedTime] = useState<{ [key: string]: string }>({});
@@ -93,11 +94,33 @@ const ReceivedPatientsList = ({ receivingDoctorId }: ReceivedPatientsListProps) 
     return commissions.find((c) => c.appointment_id === appointmentId);
   };
 
+  // Funkcia na určenie farby podľa štádia spracovania
+  // 1. Odoslaný - tyrkysový, 2. Vyšetrený - bledomodrý, 3. Vyfakturovaný - tmavomodrý
+  const getStageColor = (isExamined: boolean, isPaid: boolean) => {
+    if (isPaid) {
+      // Štádium 3: Vyfakturovaný/Vyplatený - tmavomodrý
+      return "border-l-[6px] border-l-blue-700 bg-blue-50 dark:bg-blue-950/50";
+    } else if (isExamined) {
+      // Štádium 2: Vyšetrený - bledomodrý
+      return "border-l-[6px] border-l-sky-300 bg-sky-50 dark:bg-sky-950/50";
+    } else {
+      // Štádium 1: Odoslaný - tyrkysový
+      return "border-l-[6px] border-l-cyan-500 bg-cyan-50 dark:bg-cyan-950/50";
+    }
+  };
+
   const handleDelete = async (appointmentId: string) => {
     if (!confirm("Naozaj chcete vymazať tohto pacienta? Táto akcia je nenávratná.")) {
       return;
     }
     await deleteAppointment.mutateAsync({ appointmentId, userId: receivingDoctorId });
+  };
+
+  const handleCancel = async (appointmentId: string) => {
+    if (!confirm("Naozaj chcete zrušiť túto rezerváciu?")) {
+      return;
+    }
+    await cancelAppointment.mutateAsync({ appointmentId, userId: receivingDoctorId });
   };
 
   if (isLoading) {
@@ -141,23 +164,43 @@ const ReceivedPatientsList = ({ receivingDoctorId }: ReceivedPatientsListProps) 
               </p>
             ) : (
               <div className="space-y-4">
-                {waitingPatients.map((patient) => (
+                {waitingPatients.map((patient) => {
+                  const isExamined = patient.examined_at !== null;
+                  const commission = getCommissionForAppointment(patient.id);
+                  const isPaid = commission?.status === 'paid';
+                  
+                  return (
               <div
                 key={patient.id}
-                className="border rounded-lg p-4 hover:bg-muted/50 transition-colors relative"
+                className={`border rounded-lg p-4 hover:bg-muted/50 transition-colors relative ${getStageColor(isExamined, isPaid)}`}
               >
-                {/* Delete button */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-2 right-2 h-8 w-8 text-muted-foreground hover:text-destructive"
-                  onClick={() => handleDelete(patient.id)}
-                  disabled={deleteAppointment.isPending}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {/* Action buttons */}
+                <div className="absolute top-2 right-2 flex gap-1">
+                  {patient.status === 'scheduled' && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-orange-600"
+                      onClick={() => handleCancel(patient.id)}
+                      disabled={cancelAppointment.isPending}
+                      title="Zrušiť rezerváciu"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => handleDelete(patient.id)}
+                    disabled={deleteAppointment.isPending}
+                    title="Vymazať zo zoznamu"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
 
-                <div className="flex justify-between items-start mb-3 pr-10">
+                <div className="flex justify-between items-start mb-3 pr-20">
                   <div className="flex-1">
                     <p className="font-semibold text-lg">
                       Pacient: {patient.patient_number}
@@ -233,7 +276,8 @@ const ReceivedPatientsList = ({ receivingDoctorId }: ReceivedPatientsListProps) 
                   </Button>
                 </div>
               </div>
-            ))}
+                  );
+                })}
           </div>
         )}
           </TabsContent>
@@ -248,25 +292,41 @@ const ReceivedPatientsList = ({ receivingDoctorId }: ReceivedPatientsListProps) 
               <div className="space-y-4">
                 {examinedPatients.map((patient) => {
                   const commission = getCommissionForAppointment(patient.id);
+                  const isExamined = patient.examined_at !== null;
                   const isPaid = commission?.status === 'paid';
 
                   return (
                     <div
                       key={patient.id}
-                      className="border rounded-lg p-4 hover:bg-muted/50 transition-colors relative"
+                      className={`border rounded-lg p-4 hover:bg-muted/50 transition-colors relative ${getStageColor(isExamined, isPaid)}`}
                     >
-                      {/* Delete button */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-2 right-2 h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => handleDelete(patient.id)}
-                        disabled={deleteAppointment.isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {/* Action buttons */}
+                      <div className="absolute top-2 right-2 flex gap-1">
+                        {patient.status === 'scheduled' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-orange-600"
+                            onClick={() => handleCancel(patient.id)}
+                            disabled={cancelAppointment.isPending}
+                            title="Zrušiť rezerváciu"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleDelete(patient.id)}
+                          disabled={deleteAppointment.isPending}
+                          title="Vymazať zo zoznamu"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
 
-                      <div className="flex justify-between items-start mb-3 pr-10">
+                      <div className="flex justify-between items-start mb-3 pr-20">
                         <div className="flex-1">
                           <p className="font-semibold text-lg">
                             Pacient: {patient.patient_number}
