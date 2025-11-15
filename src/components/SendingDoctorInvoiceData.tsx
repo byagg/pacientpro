@@ -93,9 +93,14 @@ const SendingDoctorInvoiceData = ({ receivingDoctorId }: SendingDoctorInvoiceDat
         .from('profiles')
         .select('id, full_name, email, invoice_name, invoice_address, bank_account, invoice_ico, invoice_dic, vat_payer_status')
         .eq('id', selectedDoctorId)
-        .single();
+        .maybeSingle(); // Use maybeSingle() to handle missing profiles gracefully
 
       if (error) {
+        // If it's a 406 or PGRST116 error (no rows returned), return null instead of throwing
+        if (error.code === 'PGRST116' || error.message?.includes('multiple (or no) rows returned')) {
+          console.warn('Profile not found for doctor:', selectedDoctorId);
+          return null;
+        }
         console.error('Error fetching doctor profile:', error);
         throw error;
       }

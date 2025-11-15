@@ -48,7 +48,7 @@ export const auth = {
       .from('profiles')
       .select('ambulance_code')
       .eq('id', authData.user.id)
-      .single();
+      .maybeSingle(); // Use maybeSingle() to handle missing profiles gracefully
 
     // Return session
     const session: Session = {
@@ -86,7 +86,7 @@ export const auth = {
       .from('profiles')
       .select('*')
       .eq('id', authData.user.id)
-      .single();
+      .maybeSingle(); // Use maybeSingle() to handle missing profiles gracefully
 
     // Return session
     const session: Session = {
@@ -114,11 +114,41 @@ export const auth = {
     if (!session) return null;
 
     // Get user profile
-    const { data: profile } = await supabase
+    let { data: profile } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', session.user.id)
-      .single();
+      .maybeSingle(); // Use maybeSingle() to handle missing profiles gracefully
+
+    // If profile doesn't exist, try to create it automatically
+    if (!profile) {
+      console.warn('Profile not found for user, attempting to create:', session.user.id);
+      
+      // Try to get user metadata from auth
+      const userMetadata = session.user.user_metadata || {};
+      const fullName = userMetadata.full_name || session.user.email?.split('@')[0] || 'User';
+      const userType = userMetadata.user_type || 'sending';
+
+      // Attempt to create profile
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: session.user.id,
+          email: session.user.email!,
+          full_name: fullName,
+          user_type: userType,
+        })
+        .select()
+        .maybeSingle();
+
+      if (createError) {
+        console.error('Failed to create profile automatically:', createError);
+        // Continue without profile - user can create it manually in ProfileSettings
+      } else {
+        profile = newProfile;
+        console.log('Profile created automatically:', profile);
+      }
+    }
 
     return {
       user: {

@@ -145,7 +145,7 @@ const ProfileSettings = ({ userId }: ProfileSettingsProps) => {
         .update(data)
         .eq('id', userId)
         .select('id, email, full_name, address, phone, bank_account, ambulance_code, invoice_name, invoice_address, invoice_ico, invoice_dic, signature_image, vat_payer_status, created_at, updated_at')
-        .single();
+        .maybeSingle(); // Use maybeSingle() to handle missing profiles gracefully
 
       if (error) {
         console.error('ProfileSettings: Update error:', error);

@@ -1,6 +1,10 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Download } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { FileText, Download, Settings, ChevronDown, ChevronUp } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
@@ -117,6 +121,24 @@ interface InvoiceItem {
 }
 
 const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) => {
+  // State pre výber údajov na faktúre
+  const [showSettings, setShowSettings] = useState(false);
+  const [displayFields, setDisplayFields] = useState({
+    sending_name: true,
+    sending_address: true,
+    sending_ico: true,
+    sending_dic: true,
+    sending_vat_payer: true,
+    sending_signature: true,
+    receiving_name: true,
+    receiving_address: true,
+    receiving_ico: true,
+    receiving_dic: true,
+    receiving_vat_payer: true,
+    receiving_signature: true,
+    receiving_bank_account: true,
+  });
+
   const { data: invoice, isLoading: loadingInvoice } = useQuery({
     queryKey: ["invoice-detail", invoiceId],
     queryFn: async () => {
@@ -304,10 +326,144 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
               <FileText className="h-5 w-5" />
               Faktúra {invoice.invoice_number}
             </DialogTitle>
-            <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
-              <Download className="mr-2 h-4 w-4" />
-              Stiahnuť PDF
-            </Button>
+            <div className="flex items-center gap-2 relative">
+              <Collapsible open={showSettings} onOpenChange={setShowSettings}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Nastavenia
+                    {showSettings ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-gray-800 border rounded-lg shadow-lg p-4 w-80 print:hidden">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm mb-3">Zobraziť na faktúre:</h3>
+                    
+                    {/* Odberateľ (Sending Doctor) */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-gray-700">ODBERATEĽ</Label>
+                      <div className="space-y-2 pl-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="sending_name"
+                            checked={displayFields.sending_name}
+                            onCheckedChange={(checked) => setDisplayFields({ ...displayFields, sending_name: checked as boolean })}
+                          />
+                          <Label htmlFor="sending_name" className="text-xs cursor-pointer">Meno</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="sending_address"
+                            checked={displayFields.sending_address}
+                            onCheckedChange={(checked) => setDisplayFields({ ...displayFields, sending_address: checked as boolean })}
+                          />
+                          <Label htmlFor="sending_address" className="text-xs cursor-pointer">Adresa</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="sending_ico"
+                            checked={displayFields.sending_ico}
+                            onCheckedChange={(checked) => setDisplayFields({ ...displayFields, sending_ico: checked as boolean })}
+                          />
+                          <Label htmlFor="sending_ico" className="text-xs cursor-pointer">IČO</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="sending_dic"
+                            checked={displayFields.sending_dic}
+                            onCheckedChange={(checked) => setDisplayFields({ ...displayFields, sending_dic: checked as boolean })}
+                          />
+                          <Label htmlFor="sending_dic" className="text-xs cursor-pointer">DIČ</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="sending_vat_payer"
+                            checked={displayFields.sending_vat_payer}
+                            onCheckedChange={(checked) => setDisplayFields({ ...displayFields, sending_vat_payer: checked as boolean })}
+                          />
+                          <Label htmlFor="sending_vat_payer" className="text-xs cursor-pointer">Status DPH</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="sending_signature"
+                            checked={displayFields.sending_signature}
+                            onCheckedChange={(checked) => setDisplayFields({ ...displayFields, sending_signature: checked as boolean })}
+                          />
+                          <Label htmlFor="sending_signature" className="text-xs cursor-pointer">Podpis</Label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dodávateľ (Receiving Doctor) */}
+                    <div className="space-y-2 border-t pt-2">
+                      <Label className="text-xs font-semibold text-gray-700">DODÁVATEĽ</Label>
+                      <div className="space-y-2 pl-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="receiving_name"
+                            checked={displayFields.receiving_name}
+                            onCheckedChange={(checked) => setDisplayFields({ ...displayFields, receiving_name: checked as boolean })}
+                          />
+                          <Label htmlFor="receiving_name" className="text-xs cursor-pointer">Meno</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="receiving_address"
+                            checked={displayFields.receiving_address}
+                            onCheckedChange={(checked) => setDisplayFields({ ...displayFields, receiving_address: checked as boolean })}
+                          />
+                          <Label htmlFor="receiving_address" className="text-xs cursor-pointer">Adresa</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="receiving_ico"
+                            checked={displayFields.receiving_ico}
+                            onCheckedChange={(checked) => setDisplayFields({ ...displayFields, receiving_ico: checked as boolean })}
+                          />
+                          <Label htmlFor="receiving_ico" className="text-xs cursor-pointer">IČO</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="receiving_dic"
+                            checked={displayFields.receiving_dic}
+                            onCheckedChange={(checked) => setDisplayFields({ ...displayFields, receiving_dic: checked as boolean })}
+                          />
+                          <Label htmlFor="receiving_dic" className="text-xs cursor-pointer">DIČ</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="receiving_vat_payer"
+                            checked={displayFields.receiving_vat_payer}
+                            onCheckedChange={(checked) => setDisplayFields({ ...displayFields, receiving_vat_payer: checked as boolean })}
+                          />
+                          <Label htmlFor="receiving_vat_payer" className="text-xs cursor-pointer">Status DPH</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="receiving_signature"
+                            checked={displayFields.receiving_signature}
+                            onCheckedChange={(checked) => setDisplayFields({ ...displayFields, receiving_signature: checked as boolean })}
+                          />
+                          <Label htmlFor="receiving_signature" className="text-xs cursor-pointer">Podpis</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="receiving_bank_account"
+                            checked={displayFields.receiving_bank_account}
+                            onCheckedChange={(checked) => setDisplayFields({ ...displayFields, receiving_bank_account: checked as boolean })}
+                          />
+                          <Label htmlFor="receiving_bank_account" className="text-xs cursor-pointer">Bankový účet</Label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+              <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
+                <Download className="mr-2 h-4 w-4" />
+                Stiahnuť PDF
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -329,21 +485,30 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
             <div className="border-r border-gray-200 pr-3 print:pr-2">
               <h2 className="text-[10px] font-semibold text-gray-500 mb-0.5 print:text-[9px]">DODÁVATEĽ</h2>
               <div className="space-y-0 text-[10px] print:text-[9px] leading-tight">
-                <p className="font-bold">{formatDoctorName(invoice.receiving_doctor_name)}</p>
-                {invoice.receiving_doctor_address && (
+                {displayFields.receiving_name && (
+                  <p className="font-bold">{formatDoctorName(invoice.receiving_doctor_name)}</p>
+                )}
+                {displayFields.receiving_address && invoice.receiving_doctor_address && (
                   <p className="text-gray-700 whitespace-pre-line leading-tight">{invoice.receiving_doctor_address}</p>
                 )}
-                <div className="flex gap-2 mt-0.5 print:gap-1">
-                  {invoice.receiving_doctor_ico && (
-                    <span className="text-gray-700">IČO: {invoice.receiving_doctor_ico}</span>
-                  )}
-                  {invoice.receiving_doctor_dic && (
-                    <span className="text-gray-700">DIČ: {invoice.receiving_doctor_dic}</span>
-                  )}
-                </div>
-                {invoice.receiving_doctor_vat_payer && (
+                {(displayFields.receiving_ico || displayFields.receiving_dic) && (
+                  <div className="flex gap-2 mt-0.5 print:gap-1">
+                    {displayFields.receiving_ico && invoice.receiving_doctor_ico && (
+                      <span className="text-gray-700">IČO: {invoice.receiving_doctor_ico}</span>
+                    )}
+                    {displayFields.receiving_dic && invoice.receiving_doctor_dic && (
+                      <span className="text-gray-700">DIČ: {invoice.receiving_doctor_dic}</span>
+                    )}
+                  </div>
+                )}
+                {displayFields.receiving_vat_payer && invoice.receiving_doctor_vat_payer && (
                   <p className="text-gray-700 mt-0.5">
                     {invoice.receiving_doctor_vat_payer === 'yes' ? 'Platca DPH' : invoice.receiving_doctor_vat_payer === 'no' ? 'Nie platca DPH' : ''}
+                  </p>
+                )}
+                {displayFields.receiving_bank_account && invoice.receiving_doctor_bank_account && (
+                  <p className="text-gray-700 mt-0.5">
+                    IBAN: {invoice.receiving_doctor_bank_account}
                   </p>
                 )}
               </div>
@@ -356,19 +521,23 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
                 <p className="text-[10px] text-yellow-600 print:text-[9px]">⚠️ Chýbajú údaje</p>
               ) : (
                 <div className="space-y-0 text-[10px] print:text-[9px] leading-tight">
-                  <p className="font-bold">{formatDoctorName(invoice.sending_doctor_name)}</p>
-                  {invoice.sending_doctor_address && (
+                  {displayFields.sending_name && (
+                    <p className="font-bold">{formatDoctorName(invoice.sending_doctor_name)}</p>
+                  )}
+                  {displayFields.sending_address && invoice.sending_doctor_address && (
                     <p className="text-gray-700 whitespace-pre-line leading-tight">{invoice.sending_doctor_address}</p>
                   )}
-                  <div className="flex gap-2 mt-0.5 print:gap-1">
-                    {invoice.sending_doctor_ico && (
-                      <span className="text-gray-700">IČO: {invoice.sending_doctor_ico}</span>
-                    )}
-                    {invoice.sending_doctor_dic && (
-                      <span className="text-gray-700">DIČ: {invoice.sending_doctor_dic}</span>
-                    )}
-                  </div>
-                  {invoice.sending_doctor_vat_payer && (
+                  {(displayFields.sending_ico || displayFields.sending_dic) && (
+                    <div className="flex gap-2 mt-0.5 print:gap-1">
+                      {displayFields.sending_ico && invoice.sending_doctor_ico && (
+                        <span className="text-gray-700">IČO: {invoice.sending_doctor_ico}</span>
+                      )}
+                      {displayFields.sending_dic && invoice.sending_doctor_dic && (
+                        <span className="text-gray-700">DIČ: {invoice.sending_doctor_dic}</span>
+                      )}
+                    </div>
+                  )}
+                  {displayFields.sending_vat_payer && invoice.sending_doctor_vat_payer && (
                     <p className="text-gray-700 mt-0.5">
                       {invoice.sending_doctor_vat_payer === 'yes' ? 'Platca DPH' : invoice.sending_doctor_vat_payer === 'no' ? 'Nie platca DPH' : ''}
                     </p>
@@ -447,10 +616,11 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
           </div>
 
           {/* Signatures - Compact */}
-          {(invoice.receiving_doctor_signature || invoice.sending_doctor_signature) && (
+          {((displayFields.receiving_signature && invoice.receiving_doctor_signature) || 
+            (displayFields.sending_signature && invoice.sending_doctor_signature)) && (
             <div className="flex justify-end gap-8 mt-2 mb-1 print:mt-1.5 print:mb-0.5 print:gap-4">
               {/* Receiving Doctor Signature (Dodávateľ) */}
-              {invoice.receiving_doctor_signature && (
+              {displayFields.receiving_signature && invoice.receiving_doctor_signature && (
                 <div className="text-center">
                   <img 
                     src={invoice.receiving_doctor_signature} 
@@ -462,7 +632,7 @@ const InvoicePreview = ({ invoiceId, open, onOpenChange }: InvoicePreviewProps) 
               )}
               
               {/* Sending Doctor Signature (Odberateľ) */}
-              {invoice.sending_doctor_signature && (
+              {displayFields.sending_signature && invoice.sending_doctor_signature && (
                 <div className="text-center">
                   <img 
                     src={invoice.sending_doctor_signature} 
